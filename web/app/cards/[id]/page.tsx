@@ -11,6 +11,10 @@ import { useParams, useRouter } from "next/navigation";
 
 import EditCardModal from "@/components/cards/EditCardModal";
 import MoveCardModal from "@/components/cards/MoveCardModal";
+import RecordSaleModal from "@/components/cards/RecordSaleModal";
+import type {
+  RecordSaleResult,
+} from "@/lib/cards/recordSale";
 import {
   type EditableCardData,
   type UpdateCardResult,
@@ -52,6 +56,26 @@ type CardImageRow = {
 type CardAttributeRow = {
   attribute_key: string;
   attribute_value: unknown;
+};
+
+type SaleTransactionRow = {
+  id: string;
+  occurred_at: string;
+  currency: string;
+  item_amount: number | string;
+  shipping_income: number | string;
+  platform_fee: number | string;
+  payment_fee: number | string;
+  shipping_cost: number | string;
+  other_costs: number | string;
+  cost_basis: number | string;
+  net_amount: number | string;
+  realized_profit: number | string;
+  platform: string | null;
+  counterparty: string | null;
+  reference: string | null;
+  notes: string | null;
+  status: string;
 };
 
 type ImageSide = "front" | "back";
@@ -249,6 +273,33 @@ function formatDate(
   ).format(
     new Date(dateValue)
   );
+}
+
+function formatDateTime(
+  dateValue: string
+) {
+  return new Intl.DateTimeFormat(
+    "da-DK",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  ).format(
+    new Date(dateValue)
+  );
+}
+
+function toFiniteNumber(
+  value: number | string | null | undefined
+) {
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue)
+    ? parsedValue
+    : 0;
 }
 
 function formatBoolean(
@@ -515,6 +566,16 @@ export default function CardDetailPage() {
     setShowMoveCard,
   ] = useState(false);
 
+  const [
+    showRecordSale,
+    setShowRecordSale,
+  ] = useState(false);
+
+  const [
+    saleTransaction,
+    setSaleTransaction,
+  ] = useState<SaleTransactionRow | null>(null);
+
   const loadCard =
     useCallback(async () => {
       if (!cardId) {
@@ -575,6 +636,7 @@ export default function CardDetailPage() {
         collectionResult,
         imageResult,
         attributeResult,
+        saleResult,
       ] = await Promise.all([
         supabase
           .from("collections")
@@ -611,6 +673,48 @@ export default function CardDetailPage() {
             "card_id",
             cardId
           ),
+
+        supabase
+          .from("card_transactions")
+          .select(`
+            id,
+            occurred_at,
+            currency,
+            item_amount,
+            shipping_income,
+            platform_fee,
+            payment_fee,
+            shipping_cost,
+            other_costs,
+            cost_basis,
+            net_amount,
+            realized_profit,
+            platform,
+            counterparty,
+            reference,
+            notes,
+            status
+          `)
+          .eq(
+            "card_id",
+            cardId
+          )
+          .eq(
+            "transaction_type",
+            "sale"
+          )
+          .eq(
+            "status",
+            "completed"
+          )
+          .order(
+            "occurred_at",
+            {
+              ascending: false,
+            }
+          )
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       setCard(currentCard);
@@ -635,6 +739,17 @@ export default function CardDetailPage() {
         );
       } else {
         setAttributes([]);
+      }
+
+      if (
+        !saleResult.error &&
+        saleResult.data
+      ) {
+        setSaleTransaction(
+          saleResult.data as SaleTransactionRow
+        );
+      } else {
+        setSaleTransaction(null);
       }
 
       const imageRows =
@@ -742,6 +857,17 @@ export default function CardDetailPage() {
         );
       }
 
+      if (saleResult.error) {
+        console.error(
+          "Salgstransaktionen kunne ikke indlæses:",
+          saleResult.error
+        );
+
+        warnings.push(
+          "En eventuel salgstransaktion kunne ikke indlæses."
+        );
+      }
+
       if (warnings.length > 0) {
         setMessage(
           warnings.join(" ")
@@ -762,6 +888,18 @@ export default function CardDetailPage() {
     result: UpdateCardResult
   ) {
     setShowEditCard(false);
+
+    await loadCard();
+
+    setMessage(
+      result.message
+    );
+  }
+
+  async function handleSaleRecorded(
+    result: RecordSaleResult
+  ) {
+    setShowRecordSale(false);
 
     await loadCard();
 
@@ -969,6 +1107,86 @@ export default function CardDetailPage() {
         100
       : null;
 
+  const salePrice =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.item_amount
+        )
+      : null;
+
+  const saleShippingIncome =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.shipping_income
+        )
+      : null;
+
+  const salePlatformFee =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.platform_fee
+        )
+      : null;
+
+  const salePaymentFee =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.payment_fee
+        )
+      : null;
+
+  const saleShippingCost =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.shipping_cost
+        )
+      : null;
+
+  const saleOtherCosts =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.other_costs
+        )
+      : null;
+
+  const saleTotalCosts =
+    saleTransaction
+      ? (salePlatformFee ?? 0) +
+        (salePaymentFee ?? 0) +
+        (saleShippingCost ?? 0) +
+        (saleOtherCosts ?? 0)
+      : null;
+
+  const saleNetProceeds =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.net_amount
+        )
+      : null;
+
+  const saleCostBasis =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.cost_basis
+        )
+      : null;
+
+  const realizedProfit =
+    saleTransaction
+      ? toFiniteNumber(
+          saleTransaction.realized_profit
+        )
+      : null;
+
+  const realizedRoi =
+    saleCostBasis !== null &&
+    saleCostBasis > 0 &&
+    realizedProfit !== null
+      ? (realizedProfit /
+          saleCostBasis) *
+        100
+      : null;
+
   const productLine =
     joinDistinct([
       card.year,
@@ -1121,11 +1339,27 @@ export default function CardDetailPage() {
           <button
             className="detail-primary-action"
             type="button"
-            disabled
-            title="Coming soon"
+            onClick={() =>
+              setShowRecordSale(
+                true
+              )
+            }
+            disabled={
+              card.state === "sold"
+            }
+            title={
+              card.state === "sold"
+                ? "This card is already registered as sold"
+                : "Record a completed sale"
+            }
           >
-            Record sale
-            <span>Soon</span>
+            {card.state === "sold"
+              ? "Sold"
+              : "Record sale"}
+
+            {card.state === "sold" && (
+              <span>Done</span>
+            )}
           </button>
         </div>
       </header>
@@ -1391,79 +1625,180 @@ export default function CardDetailPage() {
             )}
           </section>
 
-          <section className="detail-metrics-grid">
-            <article className="detail-metric">
-              <span>
-                Purchase price
-              </span>
+          {saleTransaction ? (
+            <section className="detail-metrics-grid detail-metrics-grid-sold">
+              <article className="detail-metric">
+                <span>
+                  Sale price
+                </span>
 
-              <strong>
-                {formatCurrency(
-                  purchasePrice,
-                  currency
-                )}
-              </strong>
-            </article>
+                <strong>
+                  {formatCurrency(
+                    salePrice,
+                    saleTransaction.currency
+                  )}
+                </strong>
+              </article>
 
-            <article className="detail-metric">
-              <span>
-                Estimated value
-              </span>
+              <article className="detail-metric">
+                <span>
+                  Net proceeds
+                </span>
 
-              <strong>
-                {formatCurrency(
-                  estimatedValue,
-                  currency
-                )}
-              </strong>
-            </article>
+                <strong>
+                  {formatCurrency(
+                    saleNetProceeds,
+                    saleTransaction.currency
+                  )}
+                </strong>
+              </article>
 
-            <article
-              className={[
-                "detail-metric",
-                unrealizedResult !==
-                  null &&
-                unrealizedResult >= 0
-                  ? "detail-metric-positive"
-                  : "",
-                unrealizedResult !==
-                  null &&
-                unrealizedResult < 0
-                  ? "detail-metric-negative"
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <span>
-                Unrealized result
-              </span>
+              <article className="detail-metric">
+                <span>
+                  Cost basis
+                </span>
 
-              <strong>
-                {formatCurrency(
-                  unrealizedResult,
-                  currency
-                )}
-              </strong>
-            </article>
+                <strong>
+                  {formatCurrency(
+                    saleCostBasis,
+                    saleTransaction.currency
+                  )}
+                </strong>
+              </article>
 
-            <article className="detail-metric">
-              <span>
-                Estimated ROI
-              </span>
+              <article
+                className={[
+                  "detail-metric",
+                  realizedProfit !== null &&
+                  realizedProfit >= 0
+                    ? "detail-metric-positive"
+                    : "",
+                  realizedProfit !== null &&
+                  realizedProfit < 0
+                    ? "detail-metric-negative"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <span>
+                  Realized profit
+                </span>
 
-              <strong>
-                {roi === null
-                  ? "—"
-                  : `${roi.toLocaleString(
-                      "da-DK",
-                      {
-                        maximumFractionDigits: 1,
-                      }
-                    )}%`}
-              </strong>
-            </article>
-          </section>
+                <strong>
+                  {formatCurrency(
+                    realizedProfit,
+                    saleTransaction.currency
+                  )}
+                </strong>
+              </article>
+
+              <article
+                className={[
+                  "detail-metric",
+                  realizedRoi !== null &&
+                  realizedRoi >= 0
+                    ? "detail-metric-positive"
+                    : "",
+                  realizedRoi !== null &&
+                  realizedRoi < 0
+                    ? "detail-metric-negative"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <span>
+                  Realized ROI
+                </span>
+
+                <strong>
+                  {realizedRoi === null
+                    ? "—"
+                    : `${realizedRoi.toLocaleString(
+                        "da-DK",
+                        {
+                          maximumFractionDigits: 1,
+                        }
+                      )}%`}
+                </strong>
+              </article>
+            </section>
+          ) : (
+            <section className="detail-metrics-grid">
+              <article className="detail-metric">
+                <span>
+                  Purchase price
+                </span>
+
+                <strong>
+                  {formatCurrency(
+                    purchasePrice,
+                    currency
+                  )}
+                </strong>
+              </article>
+
+              <article className="detail-metric">
+                <span>
+                  Estimated value
+                </span>
+
+                <strong>
+                  {formatCurrency(
+                    estimatedValue,
+                    currency
+                  )}
+                </strong>
+              </article>
+
+              <article
+                className={[
+                  "detail-metric",
+                  unrealizedResult !==
+                    null &&
+                  unrealizedResult >= 0
+                    ? "detail-metric-positive"
+                    : "",
+                  unrealizedResult !==
+                    null &&
+                  unrealizedResult < 0
+                    ? "detail-metric-negative"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <span>
+                  Unrealized result
+                </span>
+
+                <strong>
+                  {formatCurrency(
+                    unrealizedResult,
+                    currency
+                  )}
+                </strong>
+              </article>
+
+              <article className="detail-metric">
+                <span>
+                  Estimated ROI
+                </span>
+
+                <strong>
+                  {roi === null
+                    ? "—"
+                    : `${roi.toLocaleString(
+                        "da-DK",
+                        {
+                          maximumFractionDigits: 1,
+                        }
+                      )}%`}
+                </strong>
+              </article>
+            </section>
+          )}
         </div>
       </section>
 
@@ -1591,6 +1926,153 @@ export default function CardDetailPage() {
         </section>
       </section>
 
+
+
+      {saleTransaction && (
+        <section className="detail-panel sale-transaction-panel">
+          <div className="detail-panel-heading">
+            <div>
+              <p>
+                TRANSACTION
+              </p>
+
+              <h2>
+                Completed sale
+              </h2>
+            </div>
+
+            <span className="sale-completed-badge">
+              Sold {formatDate(
+                saleTransaction.occurred_at
+              )}
+            </span>
+          </div>
+
+          <div className="sale-transaction-grid">
+            <DetailItem
+              label="Sale price"
+              value={formatCurrency(
+                salePrice,
+                saleTransaction.currency
+              )}
+              important
+            />
+
+            <DetailItem
+              label="Shipping income"
+              value={formatCurrency(
+                saleShippingIncome,
+                saleTransaction.currency
+              )}
+            />
+
+            <DetailItem
+              label="Sale costs"
+              value={formatCurrency(
+                saleTotalCosts,
+                saleTransaction.currency
+              )}
+            />
+
+            <DetailItem
+              label="Net proceeds"
+              value={formatCurrency(
+                saleNetProceeds,
+                saleTransaction.currency
+              )}
+              important
+            />
+
+            <DetailItem
+              label="Platform"
+              value={
+                saleTransaction.platform
+              }
+            />
+
+            <DetailItem
+              label="Buyer"
+              value={
+                saleTransaction.counterparty
+              }
+            />
+
+            <DetailItem
+              label="Reference"
+              value={
+                saleTransaction.reference
+              }
+            />
+
+            <DetailItem
+              label="Sale date"
+              value={formatDateTime(
+                saleTransaction.occurred_at
+              )}
+            />
+          </div>
+
+          <div className="sale-cost-breakdown">
+            <span>
+              COST BREAKDOWN
+            </span>
+
+            <div>
+              <p>
+                Platform fee
+                <strong>
+                  {formatCurrency(
+                    salePlatformFee,
+                    saleTransaction.currency
+                  )}
+                </strong>
+              </p>
+
+              <p>
+                Payment fee
+                <strong>
+                  {formatCurrency(
+                    salePaymentFee,
+                    saleTransaction.currency
+                  )}
+                </strong>
+              </p>
+
+              <p>
+                Shipping cost
+                <strong>
+                  {formatCurrency(
+                    saleShippingCost,
+                    saleTransaction.currency
+                  )}
+                </strong>
+              </p>
+
+              <p>
+                Other costs
+                <strong>
+                  {formatCurrency(
+                    saleOtherCosts,
+                    saleTransaction.currency
+                  )}
+                </strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="sale-notes-display">
+            <span>
+              SALE NOTES
+            </span>
+
+            <p>
+              {saleTransaction.notes ||
+                "No sale notes were added."}
+            </p>
+          </div>
+        </section>
+      )}
+
       <section className="detail-panel intelligence-panel">
         <div className="detail-panel-heading">
           <div>
@@ -1714,6 +2196,27 @@ export default function CardDetailPage() {
           }}
         />
       )}
+
+      <RecordSaleModal
+        isOpen={showRecordSale}
+        cardId={card.id}
+        playerName={
+          card.player_name
+        }
+        currency={currency}
+        costBasis={purchasePrice}
+        estimatedValue={
+          estimatedValue
+        }
+        onClose={() =>
+          setShowRecordSale(false)
+        }
+        onSold={(result) => {
+          void handleSaleRecorded(
+            result
+          );
+        }}
+      />
 
       <style jsx>{`
         .card-detail-page {
@@ -2059,19 +2562,65 @@ export default function CardDetailPage() {
         }
 
         .detail-primary-action {
+          cursor: pointer;
           border-color: rgba(
             139,
             92,
             246,
+            0.38
+          ) !important;
+          background: linear-gradient(
+            135deg,
+            #8b5cf6,
+            #6d5ce7
+          ) !important;
+          color: #ffffff !important;
+          box-shadow: 0 10px 24px
+            rgba(
+              124,
+              92,
+              255,
+              0.2
+            );
+          transition:
+            transform 150ms ease,
+            filter 150ms ease,
+            box-shadow 150ms ease;
+        }
+
+        .detail-primary-action:hover:not(
+            :disabled
+          ) {
+          transform: translateY(
+            -1px
+          );
+          filter: brightness(
+            1.08
+          );
+          box-shadow: 0 13px 30px
+            rgba(
+              124,
+              92,
+              255,
+              0.28
+            );
+        }
+
+        .detail-primary-action:disabled {
+          border-color: rgba(
+            52,
+            211,
+            153,
             0.22
           ) !important;
           background: rgba(
-            124,
-            92,
-            255,
+            16,
+            185,
+            129,
             0.08
           ) !important;
-          color: #a99dfd !important;
+          color: #a7f3d0 !important;
+          box-shadow: none;
         }
 
         .card-detail-message {
@@ -2699,6 +3248,145 @@ export default function CardDetailPage() {
           padding-top: 18px;
         }
 
+
+
+        .detail-metrics-grid-sold {
+          grid-template-columns:
+            repeat(
+              5,
+              minmax(0, 1fr)
+            );
+        }
+
+        .sale-transaction-panel {
+          max-width: 1450px;
+          margin: 22px auto 0;
+          padding: 24px;
+          background:
+            radial-gradient(
+              circle at top right,
+              rgba(
+                16,
+                185,
+                129,
+                0.075
+              ),
+              transparent 39%
+            ),
+            #10131b;
+        }
+
+        .sale-completed-badge {
+          flex: 0 0 auto;
+          padding: 8px 11px;
+          border: 1px solid
+            rgba(
+              52,
+              211,
+              153,
+              0.26
+            );
+          border-radius: 10px;
+          background: rgba(
+            16,
+            185,
+            129,
+            0.08
+          );
+          color: #a7f3d0;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .sale-transaction-grid {
+          display: grid;
+          grid-template-columns:
+            repeat(
+              4,
+              minmax(0, 1fr)
+            );
+          gap: 10px;
+          padding-top: 18px;
+        }
+
+        .sale-cost-breakdown {
+          margin-top: 16px;
+          padding: 16px;
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.1
+            );
+          border-radius: 14px;
+          background: rgba(
+            0,
+            0,
+            0,
+            0.13
+          );
+        }
+
+        .sale-cost-breakdown > span,
+        .sale-notes-display > span {
+          color: #71798b;
+          font-size: 9px;
+          font-weight: 750;
+          letter-spacing: 0.09em;
+        }
+
+        .sale-cost-breakdown > div {
+          display: grid;
+          grid-template-columns:
+            repeat(
+              4,
+              minmax(0, 1fr)
+            );
+          gap: 10px;
+          margin-top: 11px;
+        }
+
+        .sale-cost-breakdown p {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin: 0;
+          color: #71798b;
+          font-size: 10px;
+        }
+
+        .sale-cost-breakdown strong {
+          color: #d7dbe4;
+          font-size: 12px;
+        }
+
+        .sale-notes-display {
+          margin-top: 16px;
+          padding: 16px;
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.1
+            );
+          border-radius: 14px;
+          background: rgba(
+            0,
+            0,
+            0,
+            0.13
+          );
+        }
+
+        .sale-notes-display p {
+          margin: 8px 0 0;
+          color: #b4bac7;
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
         .card-detail-error {
           max-width: 800px;
           margin-top: 22px;
@@ -2742,7 +3430,18 @@ export default function CardDetailPage() {
               );
           }
 
-          .detail-metrics-grid {
+          .detail-metrics-grid,
+          .detail-metrics-grid-sold {
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(0, 1fr)
+              );
+          }
+
+          .sale-transaction-grid,
+          .sale-cost-breakdown
+            > div {
             grid-template-columns:
               repeat(
                 2,
@@ -2798,7 +3497,11 @@ export default function CardDetailPage() {
 
           .identity-grid,
           .detail-metrics-grid,
-          .purchase-detail-grid {
+          .detail-metrics-grid-sold,
+          .purchase-detail-grid,
+          .sale-transaction-grid,
+          .sale-cost-breakdown
+            > div {
             grid-template-columns:
               1fr;
           }
@@ -2815,6 +3518,7 @@ export default function CardDetailPage() {
           .card-identity-panel,
           .card-secondary-grid
             > .detail-panel,
+          .sale-transaction-panel,
           .intelligence-panel {
             padding: 19px;
           }
