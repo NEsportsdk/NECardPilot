@@ -234,10 +234,7 @@ export default function CollectionPage() {
     setLoading(true);
     setMessage("");
 
-    const [
-      collectionResult,
-      cardResult,
-    ] = await Promise.all([
+    const [collectionResult, cardResult] = await Promise.all([
       supabase
         .from("collections")
         .select("*")
@@ -297,10 +294,7 @@ export default function CollectionPage() {
 
     const cardIds = rawCards.map((card) => card.id);
 
-    const [
-      imageResult,
-      attributeResult,
-    ] = await Promise.all([
+    const [imageResult, attributeResult] = await Promise.all([
       supabase
         .from("card_images")
         .select(`
@@ -360,10 +354,7 @@ export default function CollectionPage() {
 
     await Promise.all(
       imageRows.map(async (image) => {
-        const {
-          data,
-          error,
-        } = await supabase.storage
+        const { data, error } = await supabase.storage
           .from(CARD_IMAGE_BUCKET)
           .createSignedUrl(
             image.storage_path,
@@ -547,9 +538,7 @@ export default function CollectionPage() {
       return;
     }
 
-    const {
-      error,
-    } = await supabase
+    const { error } = await supabase
       .from("cards")
       .insert({
         user_id: user.id,
@@ -897,97 +886,117 @@ export default function CollectionPage() {
                 "Card details not specified";
 
               return (
-                <article
-                  className="sports-card-item"
+                <Link
+                  className="sports-card-link"
+                  href={`/cards/${card.id}`}
                   key={card.id}
+                  aria-label={`Open ${card.player_name}`}
                 >
-                  <div className="sports-card-image-frame">
-                    {card.front_image_url ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          className="sports-card-image"
-                          src={
-                            card.front_image_url
-                          }
-                          alt={`${card.player_name} card front`}
-                        />
-                      </>
-                    ) : (
-                      <div className="sports-card-no-image">
-                        <span>NE</span>
+                  <article className="sports-card-item">
+                    <div className="sports-card-image-frame">
+                      {card.front_image_url ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            className="sports-card-image"
+                            src={
+                              card.front_image_url
+                            }
+                            alt={`${card.player_name} card front`}
+                          />
+                        </>
+                      ) : (
+                        <div className="sports-card-no-image">
+                          <span>NE</span>
 
-                        <small>
-                          No image available
-                        </small>
-                      </div>
-                    )}
+                          <small>
+                            No image available
+                          </small>
+                        </div>
+                      )}
 
-                    <span
-                      className={`card-state-badge card-state-${stateMeta.tone}`}
-                    >
-                      {stateMeta.label}
-                    </span>
-
-                    {card.ai_confidence !==
-                      null && (
-                      <span className="card-confidence-badge">
-                        {Math.round(
-                          card.ai_confidence
-                        )}
-                        % AI
+                      <span
+                        className={`card-state-badge card-state-${stateMeta.tone}`}
+                      >
+                        {stateMeta.label}
                       </span>
-                    )}
-                  </div>
 
-                  <div className="sports-card-content">
-                    <p className="sports-card-set">
-                      {titleLine}
-                    </p>
+                      {card.ai_confidence !==
+                        null && (
+                        <span className="card-confidence-badge">
+                          {Math.round(
+                            card.ai_confidence
+                          )}
+                          % AI
+                        </span>
+                      )}
+                    </div>
 
-                    <h3>
-                      {card.player_name}
-                    </h3>
-
-                    {card.team && (
-                      <p className="sports-card-team">
-                        {card.team}
+                    <div className="sports-card-content">
+                      <p className="sports-card-set">
+                        {titleLine}
                       </p>
-                    )}
 
-                    <p className="sports-card-details">
-                      {detailLine}
-                    </p>
+                      <h3>
+                        {card.player_name}
+                      </h3>
 
-                    {card.serial_number && (
-                      <span className="serial-badge">
-                        {card.serial_number}
-                      </span>
-                    )}
+                      {card.team && (
+                        <p className="sports-card-team">
+                          {card.team}
+                        </p>
+                      )}
 
-                    <div className="sports-card-values">
-                      <div>
-                        <span>Cost</span>
+                      <p className="sports-card-details">
+                        {detailLine}
+                      </p>
 
-                        <strong>
-                          {formatCurrency(
-                            card.purchase_price
-                          )}
-                        </strong>
+                      {card.serial_number && (
+                        <span className="serial-badge">
+                          {
+                            card.serial_number
+                          }
+                        </span>
+                      )}
+
+                      <div className="sports-card-values">
+                        <div>
+                          <span>
+                            Cost
+                          </span>
+
+                          <strong>
+                            {formatCurrency(
+                              card.purchase_price
+                            )}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>
+                            Value
+                          </span>
+
+                          <strong>
+                            {formatCurrency(
+                              card.estimated_value
+                            )}
+                          </strong>
+                        </div>
                       </div>
 
-                      <div>
-                        <span>Value</span>
+                      <div className="sports-card-open-row">
+                        <span>
+                          Open card
+                        </span>
 
                         <strong>
-                          {formatCurrency(
-                            card.estimated_value
-                          )}
+                          →
                         </strong>
                       </div>
                     </div>
-                  </div>
-                </article>
+                  </article>
+                </Link>
               );
             })}
           </div>
@@ -1360,6 +1369,61 @@ export default function CollectionPage() {
       )}
 
       <style jsx>{`
+        .sports-card-link {
+          min-width: 0;
+          height: 100%;
+          display: block;
+          border-radius: 20px;
+          color: inherit;
+          text-decoration: none;
+          outline: none;
+        }
+
+        .sports-card-link .sports-card-item {
+          height: 100%;
+          transition:
+            transform 170ms ease,
+            border-color 170ms ease,
+            box-shadow 170ms ease;
+        }
+
+        .sports-card-link:hover .sports-card-item {
+          transform: translateY(
+            -4px
+          );
+          border-color: rgba(
+            139,
+            92,
+            246,
+            0.38
+          );
+          box-shadow:
+            0 20px 44px
+              rgba(
+                0,
+                0,
+                0,
+                0.28
+              ),
+            0 0 0 1px
+              rgba(
+                139,
+                92,
+                246,
+                0.05
+              );
+        }
+
+        .sports-card-link:focus-visible {
+          box-shadow: 0 0 0 3px
+            rgba(
+              139,
+              92,
+              246,
+              0.5
+            );
+        }
+
         .sports-card-image-frame {
           position: relative;
           aspect-ratio: 2.5 / 3.5;
@@ -1387,6 +1451,13 @@ export default function CollectionPage() {
           display: block;
           padding: 11px;
           object-fit: contain;
+          transition:
+            transform 220ms ease;
+        }
+
+        .sports-card-link:hover
+          .sports-card-image {
+          transform: scale(1.025);
         }
 
         .sports-card-no-image {
@@ -1572,6 +1643,46 @@ export default function CollectionPage() {
           margin: -1px 0 8px;
           color: #6f7890;
           font-size: 10px;
+        }
+
+        .sports-card-open-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 15px;
+          padding-top: 13px;
+          border-top: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.1
+            );
+          color: #777f91;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+        }
+
+        .sports-card-open-row strong {
+          color: #9f93ff;
+          font-size: 14px;
+          transition:
+            transform 170ms ease;
+        }
+
+        .sports-card-link:hover
+          .sports-card-open-row {
+          color: #c7ccd6;
+        }
+
+        .sports-card-link:hover
+          .sports-card-open-row
+          strong {
+          transform: translateX(
+            3px
+          );
         }
 
         @media (
