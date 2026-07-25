@@ -7,9 +7,10 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import EditCardModal from "@/components/cards/EditCardModal";
+import MoveCardModal from "@/components/cards/MoveCardModal";
 import {
   type EditableCardData,
   type UpdateCardResult,
@@ -437,6 +438,7 @@ function DetailItem({
 
 export default function CardDetailPage() {
   const params = useParams();
+  const router = useRouter();
 
   const rawCardId = params.id;
 
@@ -506,6 +508,11 @@ export default function CardDetailPage() {
   const [
     showEditCard,
     setShowEditCard,
+  ] = useState(false);
+
+  const [
+    showMoveCard,
+    setShowMoveCard,
   ] = useState(false);
 
   const loadCard =
@@ -1094,12 +1101,21 @@ export default function CardDetailPage() {
           </button>
 
           <button
+            className="detail-move-action"
             type="button"
-            disabled
-            title="Coming soon"
+            onClick={() =>
+              setShowMoveCard(
+                true
+              )
+            }
+            disabled={!collection}
+            title={
+              collection
+                ? "Move card to another collection"
+                : "Collection data is unavailable"
+            }
           >
             Move card
-            <span>Soon</span>
           </button>
 
           <button
@@ -1672,6 +1688,33 @@ export default function CardDetailPage() {
         }}
       />
 
+      {collection && (
+        <MoveCardModal
+          isOpen={showMoveCard}
+          cardId={card.id}
+          playerName={
+            card.player_name
+          }
+          currentCollection={{
+            id: collection.id,
+            name: collection.name,
+            type: collection.type,
+            currency:
+              collection.currency,
+          }}
+          onClose={() =>
+            setShowMoveCard(false)
+          }
+          onMoved={(result) => {
+            setShowMoveCard(false);
+
+            router.push(
+              `/collections/${result.toCollection.id}`
+            );
+          }}
+        />
+      )}
+
       <style jsx>{`
         .card-detail-page {
           min-height: 100vh;
@@ -1951,6 +1994,44 @@ export default function CardDetailPage() {
             139,
             250,
             0.55
+          ) !important;
+          filter: brightness(
+            1.1
+          );
+        }
+
+        .detail-move-action {
+          cursor: pointer;
+          border-color: rgba(
+            96,
+            165,
+            250,
+            0.24
+          ) !important;
+          background: rgba(
+            59,
+            130,
+            246,
+            0.07
+          ) !important;
+          color: #bfdbfe !important;
+          transition:
+            transform 150ms ease,
+            filter 150ms ease,
+            border-color 150ms ease;
+        }
+
+        .detail-move-action:hover:not(
+            :disabled
+          ) {
+          transform: translateY(
+            -1px
+          );
+          border-color: rgba(
+            96,
+            165,
+            250,
+            0.5
           ) !important;
           filter: brightness(
             1.1
