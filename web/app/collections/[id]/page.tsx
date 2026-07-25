@@ -27,6 +27,7 @@ type Collection = {
 
 type CardRow = {
   id: string;
+  current_collection_id: string;
   player_name: string;
   year: string | null;
   manufacturer: string | null;
@@ -52,6 +53,51 @@ type CardAttributeRow = {
   attribute_value: unknown;
 };
 
+type NumericDatabaseValue =
+  | number
+  | string
+  | null;
+
+type SaleTransactionRow = {
+  id: string;
+  card_id: string;
+  collection_id: string | null;
+  occurred_at: string;
+  currency: string;
+  item_amount: NumericDatabaseValue;
+  shipping_income: NumericDatabaseValue;
+  platform_fee: NumericDatabaseValue;
+  payment_fee: NumericDatabaseValue;
+  shipping_cost: NumericDatabaseValue;
+  other_costs: NumericDatabaseValue;
+  cost_basis: NumericDatabaseValue;
+  net_amount: NumericDatabaseValue;
+  realized_profit: NumericDatabaseValue;
+  platform: string | null;
+  counterparty: string | null;
+  reference: string | null;
+};
+
+type SaleTransaction = {
+  id: string;
+  card_id: string;
+  collection_id: string | null;
+  occurred_at: string;
+  currency: string;
+  item_amount: number;
+  shipping_income: number;
+  platform_fee: number;
+  payment_fee: number;
+  shipping_cost: number;
+  other_costs: number;
+  cost_basis: number;
+  net_amount: number;
+  realized_profit: number;
+  platform: string | null;
+  counterparty: string | null;
+  reference: string | null;
+};
+
 type Card = CardRow & {
   front_image_url: string | null;
   sport: string | null;
@@ -60,7 +106,14 @@ type Card = CardRow & {
   product: string | null;
   insert_name: string | null;
   ai_confidence: number | null;
+  is_current_collection: boolean;
+  sale: SaleTransaction | null;
 };
+
+type CardFilter =
+  | "active"
+  | "sold"
+  | "all";
 
 type CardStateMeta = {
   label: string;
@@ -133,12 +186,136 @@ function joinDistinct(
   ).join(" · ");
 }
 
-function formatCurrency(value: number | null) {
+function toDatabaseNumber(
+  value: NumericDatabaseValue
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return 0;
+  }
+
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue)
+    ? parsedValue
+    : 0;
+}
+
+function formatCurrency(
+  value: number | null,
+  currency = "DKK"
+) {
   if (value === null) {
     return "—";
   }
 
-  return `${Number(value).toLocaleString("da-DK")} kr.`;
+  if (currency === "DKK") {
+    return `${Number(value).toLocaleString(
+      "da-DK",
+      {
+        minimumFractionDigits:
+          value % 1 === 0 ? 0 : 2,
+        maximumFractionDigits: 2,
+      }
+    )} kr.`;
+  }
+
+  return new Intl.NumberFormat(
+    "da-DK",
+    {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }
+  ).format(value);
+}
+
+function formatPercentage(
+  value: number | null
+) {
+  if (value === null) {
+    return "—";
+  }
+
+  return `${value.toLocaleString(
+    "da-DK",
+    {
+      maximumFractionDigits: 1,
+    }
+  )}%`;
+}
+
+function formatShortDate(
+  value: string
+) {
+  return new Intl.DateTimeFormat(
+    "da-DK",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }
+  ).format(new Date(value));
+}
+
+function normalizeSaleTransaction(
+  transaction: SaleTransactionRow
+): SaleTransaction {
+  return {
+    id: transaction.id,
+    card_id: transaction.card_id,
+    collection_id:
+      transaction.collection_id,
+    occurred_at:
+      transaction.occurred_at,
+    currency:
+      transaction.currency,
+    item_amount:
+      toDatabaseNumber(
+        transaction.item_amount
+      ),
+    shipping_income:
+      toDatabaseNumber(
+        transaction.shipping_income
+      ),
+    platform_fee:
+      toDatabaseNumber(
+        transaction.platform_fee
+      ),
+    payment_fee:
+      toDatabaseNumber(
+        transaction.payment_fee
+      ),
+    shipping_cost:
+      toDatabaseNumber(
+        transaction.shipping_cost
+      ),
+    other_costs:
+      toDatabaseNumber(
+        transaction.other_costs
+      ),
+    cost_basis:
+      toDatabaseNumber(
+        transaction.cost_basis
+      ),
+    net_amount:
+      toDatabaseNumber(
+        transaction.net_amount
+      ),
+    realized_profit:
+      toDatabaseNumber(
+        transaction.realized_profit
+      ),
+    platform:
+      transaction.platform,
+    counterparty:
+      transaction.counterparty,
+    reference:
+      transaction.reference,
+  };
 }
 
 function getCardStateMeta(state: string | null): CardStateMeta {
@@ -199,6 +376,12 @@ export default function CollectionPage() {
 
   const [cards, setCards] = useState<Card[]>([]);
 
+  const [saleTransactions, setSaleTransactions] =
+    useState<SaleTransaction[]>([]);
+
+  const [cardFilter, setCardFilter] =
+    useState<CardFilter>("active");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -234,7 +417,11 @@ export default function CollectionPage() {
     setLoading(true);
     setMessage("");
 
-    const [collectionResult, cardResult] = await Promise.all([
+    const [
+      collectionResult,
+      currentCardResult,
+      saleResult,
+    ] = await Promise.all([
       supabase
         .from("collections")
         .select("*")
@@ -245,6 +432,7 @@ export default function CollectionPage() {
         .from("cards")
         .select(`
           id,
+          current_collection_id,
           player_name,
           year,
           manufacturer,
@@ -257,8 +445,39 @@ export default function CollectionPage() {
           state,
           created_at
         `)
-        .eq("current_collection_id", collectionId)
+        .eq(
+          "current_collection_id",
+          collectionId
+        )
         .order("created_at", {
+          ascending: false,
+        }),
+
+      supabase
+        .from("card_transactions")
+        .select(`
+          id,
+          card_id,
+          collection_id,
+          occurred_at,
+          currency,
+          item_amount,
+          shipping_income,
+          platform_fee,
+          payment_fee,
+          shipping_cost,
+          other_costs,
+          cost_basis,
+          net_amount,
+          realized_profit,
+          platform,
+          counterparty,
+          reference
+        `)
+        .eq("collection_id", collectionId)
+        .eq("transaction_type", "sale")
+        .eq("status", "completed")
+        .order("occurred_at", {
           ascending: false,
         }),
     ]);
@@ -271,30 +490,124 @@ export default function CollectionPage() {
       return;
     }
 
-    if (cardResult.error) {
+    if (currentCardResult.error) {
       setMessage(
-        `Kunne ikke hente kortene: ${cardResult.error.message}`
+        `Kunne ikke hente kortene: ${currentCardResult.error.message}`
       );
       setLoading(false);
       return;
     }
 
-    const rawCards =
-      (cardResult.data ?? []) as CardRow[];
+    const warnings: string[] = [];
+
+    const currentCards =
+      (currentCardResult.data ?? []) as CardRow[];
+
+    const normalizedSales = saleResult.error
+      ? []
+      : ((saleResult.data ?? []) as SaleTransactionRow[]).map(
+          normalizeSaleTransaction
+        );
+
+    if (saleResult.error) {
+      console.error(
+        "Salgstransaktionerne kunne ikke hentes:",
+        saleResult.error
+      );
+
+      warnings.push(
+        "Kortene blev indlæst, men salgsresultaterne kunne ikke vises."
+      );
+    }
 
     setCollection(
       collectionResult.data as Collection
     );
 
+    setSaleTransactions(
+      normalizedSales
+    );
+
+    const currentCardIds = new Set(
+      currentCards.map((card) => card.id)
+    );
+
+    const historicalSoldCardIds =
+      normalizedSales
+        .map((sale) => sale.card_id)
+        .filter(
+          (cardId) =>
+            !currentCardIds.has(cardId)
+        );
+
+    let historicalSoldCards: CardRow[] = [];
+
+    if (historicalSoldCardIds.length > 0) {
+      const historicalCardResult =
+        await supabase
+          .from("cards")
+          .select(`
+            id,
+            current_collection_id,
+            player_name,
+            year,
+            manufacturer,
+            set_name,
+            card_number,
+            parallel_name,
+            serial_number,
+            purchase_price,
+            estimated_value,
+            state,
+            created_at
+          `)
+          .in("id", historicalSoldCardIds);
+
+      if (historicalCardResult.error) {
+        console.error(
+          "Historiske salgskort kunne ikke hentes:",
+          historicalCardResult.error
+        );
+
+        warnings.push(
+          "Nogle historiske salgskort kunne ikke vises."
+        );
+      } else {
+        historicalSoldCards =
+          (historicalCardResult.data ?? []) as CardRow[];
+      }
+    }
+
+    const rawCards = [
+      ...currentCards,
+      ...historicalSoldCards,
+    ];
+
     if (rawCards.length === 0) {
       setCards([]);
+
+      if (warnings.length > 0) {
+        setMessage(
+          Array.from(
+            new Set(warnings)
+          ).join(" ")
+        );
+      }
+
       setLoading(false);
       return;
     }
 
-    const cardIds = rawCards.map((card) => card.id);
+    const cardIds = Array.from(
+      new Set(
+        rawCards.map((card) => card.id)
+      )
+    );
 
-    const [imageResult, attributeResult] = await Promise.all([
+    const [
+      imageResult,
+      attributeResult,
+    ] = await Promise.all([
       supabase
         .from("card_images")
         .select(`
@@ -314,8 +627,6 @@ export default function CollectionPage() {
         `)
         .in("card_id", cardIds),
     ]);
-
-    const warnings: string[] = [];
 
     const imageRows = imageResult.error
       ? []
@@ -354,12 +665,13 @@ export default function CollectionPage() {
 
     await Promise.all(
       imageRows.map(async (image) => {
-        const { data, error } = await supabase.storage
-          .from(CARD_IMAGE_BUCKET)
-          .createSignedUrl(
-            image.storage_path,
-            SIGNED_URL_SECONDS
-          );
+        const { data, error } =
+          await supabase.storage
+            .from(CARD_IMAGE_BUCKET)
+            .createSignedUrl(
+              image.storage_path,
+              SIGNED_URL_SECONDS
+            );
 
         if (error || !data?.signedUrl) {
           signedUrlFailure = true;
@@ -393,7 +705,9 @@ export default function CollectionPage() {
 
     for (const attribute of attributeRows) {
       const currentAttributes =
-        attributesByCardId.get(attribute.card_id) ?? [];
+        attributesByCardId.get(
+          attribute.card_id
+        ) ?? [];
 
       currentAttributes.push(attribute);
 
@@ -403,59 +717,79 @@ export default function CollectionPage() {
       );
     }
 
-    const enrichedCards: Card[] = rawCards.map((card) => {
-      const cardAttributes =
-        attributesByCardId.get(card.id) ?? [];
+    const saleByCardId =
+      new Map<string, SaleTransaction>();
 
-      return {
-        ...card,
+    for (const sale of normalizedSales) {
+      saleByCardId.set(
+        sale.card_id,
+        sale
+      );
+    }
 
-        front_image_url:
-          signedImageByCardId.get(card.id) ?? null,
+    const enrichedCards: Card[] =
+      rawCards.map((card) => {
+        const cardAttributes =
+          attributesByCardId.get(card.id) ?? [];
 
-        sport:
-          getStringAttribute(
-            cardAttributes,
-            "sport"
-          ),
+        return {
+          ...card,
 
-        team:
-          getStringAttribute(
-            cardAttributes,
-            "team"
-          ),
+          front_image_url:
+            signedImageByCardId.get(card.id) ?? null,
 
-        brand:
-          getStringAttribute(
-            cardAttributes,
-            "brand"
-          ),
+          sport:
+            getStringAttribute(
+              cardAttributes,
+              "sport"
+            ),
 
-        product:
-          getStringAttribute(
-            cardAttributes,
-            "product"
-          ),
+          team:
+            getStringAttribute(
+              cardAttributes,
+              "team"
+            ),
 
-        insert_name:
-          getStringAttribute(
-            cardAttributes,
-            "set_name"
-          ) ?? card.set_name,
+          brand:
+            getStringAttribute(
+              cardAttributes,
+              "brand"
+            ),
 
-        ai_confidence:
-          getNumberAttribute(
-            cardAttributes,
-            "ai_confidence"
-          ),
-      };
-    });
+          product:
+            getStringAttribute(
+              cardAttributes,
+              "product"
+            ),
+
+          insert_name:
+            getStringAttribute(
+              cardAttributes,
+              "set_name"
+            ) ?? card.set_name,
+
+          ai_confidence:
+            getNumberAttribute(
+              cardAttributes,
+              "ai_confidence"
+            ),
+
+          is_current_collection:
+            card.current_collection_id ===
+            collectionId,
+
+          sale:
+            saleByCardId.get(card.id) ?? null,
+        };
+      });
 
     setCards(enrichedCards);
 
     if (warnings.length > 0) {
       setMessage(
-        Array.from(new Set(warnings)).join(" ")
+        Array.from(
+          new Set(warnings)
+        ).join(" ")
       );
     }
 
@@ -591,8 +925,35 @@ export default function CollectionPage() {
     await loadCollection();
   }
 
-  const totalPurchasePrice =
-    cards.reduce(
+  const activeCards = cards.filter(
+    (card) =>
+      card.is_current_collection &&
+      card.state !== "sold"
+  );
+
+  const soldCards = cards.filter(
+    (card) => Boolean(card.sale)
+  );
+
+  const visibleCards =
+    cardFilter === "active"
+      ? activeCards
+      : cardFilter === "sold"
+        ? [...soldCards].sort(
+            (firstCard, secondCard) =>
+              new Date(
+                secondCard.sale?.occurred_at ??
+                  secondCard.created_at
+              ).getTime() -
+              new Date(
+                firstCard.sale?.occurred_at ??
+                  firstCard.created_at
+              ).getTime()
+          )
+        : cards;
+
+  const activePurchasePrice =
+    activeCards.reduce(
       (total, card) =>
         total +
         Number(
@@ -601,8 +962,8 @@ export default function CollectionPage() {
       0
     );
 
-  const totalEstimatedValue =
-    cards.reduce(
+  const activeEstimatedValue =
+    activeCards.reduce(
       (total, card) =>
         total +
         Number(
@@ -610,6 +971,50 @@ export default function CollectionPage() {
         ),
       0
     );
+
+  const activeUnrealizedResult =
+    activeEstimatedValue -
+    activePurchasePrice;
+
+  const soldGrossRevenue =
+    saleTransactions.reduce(
+      (total, sale) =>
+        total +
+        sale.item_amount +
+        sale.shipping_income,
+      0
+    );
+
+  const soldNetProceeds =
+    saleTransactions.reduce(
+      (total, sale) =>
+        total +
+        sale.net_amount,
+      0
+    );
+
+  const soldCostBasis =
+    saleTransactions.reduce(
+      (total, sale) =>
+        total +
+        sale.cost_basis,
+      0
+    );
+
+  const soldRealizedProfit =
+    saleTransactions.reduce(
+      (total, sale) =>
+        total +
+        sale.realized_profit,
+      0
+    );
+
+  const soldRealizedRoi =
+    soldCostBasis > 0
+      ? (soldRealizedProfit /
+          soldCostBasis) *
+        100
+      : null;
 
   if (loading) {
     return (
@@ -663,15 +1068,19 @@ export default function CollectionPage() {
           <h1>{collection.name}</h1>
 
           <p className="collection-page-description">
-            {cards.length}{" "}
-            {cards.length === 1
-              ? "card"
-              : "cards"}{" "}
+            {activeCards.length}{" "}
+            {activeCards.length === 1
+              ? "active card"
+              : "active cards"}{" "}
             ·{" "}
-            {totalEstimatedValue.toLocaleString(
-              "da-DK"
+            {formatCurrency(
+              activeEstimatedValue,
+              collection.currency
             )}{" "}
-            kr.
+            active value
+            {saleTransactions.length > 0
+              ? ` · ${saleTransactions.length} sold`
+              : ""}
           </p>
         </div>
 
@@ -706,7 +1115,7 @@ export default function CollectionPage() {
         <article className="metric-card">
           <div className="metric-card-header">
             <span className="metric-label">
-              Cards
+              Active cards
             </span>
 
             <span className="metric-icon">
@@ -715,18 +1124,18 @@ export default function CollectionPage() {
           </div>
 
           <p className="metric-value">
-            {cards.length}
+            {activeCards.length}
           </p>
 
           <p className="metric-caption">
-            registreret i collection
+            currently held
           </p>
         </article>
 
         <article className="metric-card">
           <div className="metric-card-header">
             <span className="metric-label">
-              Total cost
+              Active cost
             </span>
 
             <span className="metric-icon">
@@ -735,21 +1144,21 @@ export default function CollectionPage() {
           </div>
 
           <p className="metric-value">
-            {totalPurchasePrice.toLocaleString(
-              "da-DK"
-            )}{" "}
-            kr.
+            {formatCurrency(
+              activePurchasePrice,
+              collection.currency
+            )}
           </p>
 
           <p className="metric-caption">
-            samlet købspris
+            cost basis still held
           </p>
         </article>
 
         <article className="metric-card metric-card-featured">
           <div className="metric-card-header">
             <span className="metric-label">
-              Estimated value
+              Active value
             </span>
 
             <span className="metric-icon">
@@ -758,14 +1167,14 @@ export default function CollectionPage() {
           </div>
 
           <p className="metric-value">
-            {totalEstimatedValue.toLocaleString(
-              "da-DK"
-            )}{" "}
-            kr.
+            {formatCurrency(
+              activeEstimatedValue,
+              collection.currency
+            )}
           </p>
 
           <p className="metric-caption">
-            brugerangivet værdi
+            current estimated value
           </p>
         </article>
 
@@ -780,20 +1189,123 @@ export default function CollectionPage() {
             </span>
           </div>
 
-          <p className="metric-value">
-            {(
-              totalEstimatedValue -
-              totalPurchasePrice
-            ).toLocaleString(
-              "da-DK"
-            )}{" "}
-            kr.
+          <p
+            className={[
+              "metric-value",
+              activeUnrealizedResult > 0
+                ? "metric-value-positive"
+                : "",
+              activeUnrealizedResult < 0
+                ? "metric-value-negative"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {formatCurrency(
+              activeUnrealizedResult,
+              collection.currency
+            )}
           </p>
 
           <p className="metric-caption">
-            estimeret værdiforskel
+            active portfolio difference
           </p>
         </article>
+      </section>
+
+      <section className="sales-performance-panel">
+        <div className="sales-performance-heading">
+          <div>
+            <p className="eyebrow">
+              Realized performance
+            </p>
+
+            <h2>Sales</h2>
+
+            <p>
+              Completed sales recorded from this collection.
+            </p>
+          </div>
+
+          <button
+            className="view-sold-button"
+            type="button"
+            onClick={() =>
+              setCardFilter("sold")
+            }
+            disabled={
+              saleTransactions.length === 0
+            }
+          >
+            View sold cards →
+          </button>
+        </div>
+
+        <div className="sales-summary-grid">
+          <article className="sales-metric-card">
+            <span>Sold cards</span>
+            <strong>
+              {saleTransactions.length}
+            </strong>
+            <small>completed sales</small>
+          </article>
+
+          <article className="sales-metric-card">
+            <span>Gross sales</span>
+            <strong>
+              {formatCurrency(
+                soldGrossRevenue,
+                collection.currency
+              )}
+            </strong>
+            <small>price plus shipping income</small>
+          </article>
+
+          <article className="sales-metric-card">
+            <span>Net proceeds</span>
+            <strong>
+              {formatCurrency(
+                soldNetProceeds,
+                collection.currency
+              )}
+            </strong>
+            <small>after fees and costs</small>
+          </article>
+
+          <article
+            className={[
+              "sales-metric-card",
+              soldRealizedProfit > 0
+                ? "sales-metric-positive"
+                : "",
+              soldRealizedProfit < 0
+                ? "sales-metric-negative"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <span>Realized profit</span>
+            <strong>
+              {formatCurrency(
+                soldRealizedProfit,
+                collection.currency
+              )}
+            </strong>
+            <small>net proceeds minus cost basis</small>
+          </article>
+
+          <article className="sales-metric-card">
+            <span>Realized ROI</span>
+            <strong>
+              {formatPercentage(
+                soldRealizedRoi
+              )}
+            </strong>
+            <small>weighted return on sold cards</small>
+          </article>
+        </div>
       </section>
 
       {message && (
@@ -803,64 +1315,149 @@ export default function CollectionPage() {
       )}
 
       <section className="panel cards-panel">
-        <div className="panel-header">
+        <div className="panel-header cards-panel-header">
           <div>
             <p className="eyebrow">
-              Inventory
+              {cardFilter === "sold"
+                ? "Sales history"
+                : cardFilter === "all"
+                  ? "Complete history"
+                  : "Inventory"}
             </p>
 
-            <h2>Cards</h2>
+            <h2>
+              {cardFilter === "sold"
+                ? "Sold cards"
+                : cardFilter === "all"
+                  ? "All cards"
+                  : "Active cards"}
+            </h2>
           </div>
 
-          <div className="card-view-actions">
-            <button
-              className="small-view-button small-view-button-active"
-              type="button"
+          <div className="cards-panel-controls">
+            <div
+              className="card-filter-tabs"
+              role="tablist"
+              aria-label="Card filter"
             >
-              Grid
-            </button>
+              <button
+                className={
+                  cardFilter === "active"
+                    ? "card-filter-active"
+                    : ""
+                }
+                type="button"
+                role="tab"
+                aria-selected={
+                  cardFilter === "active"
+                }
+                onClick={() =>
+                  setCardFilter("active")
+                }
+              >
+                Active
+                <span>{activeCards.length}</span>
+              </button>
 
-            <button
-              className="small-view-button"
-              type="button"
-              disabled
-            >
-              List
-            </button>
+              <button
+                className={
+                  cardFilter === "sold"
+                    ? "card-filter-active"
+                    : ""
+                }
+                type="button"
+                role="tab"
+                aria-selected={
+                  cardFilter === "sold"
+                }
+                onClick={() =>
+                  setCardFilter("sold")
+                }
+              >
+                Sold
+                <span>{soldCards.length}</span>
+              </button>
+
+              <button
+                className={
+                  cardFilter === "all"
+                    ? "card-filter-active"
+                    : ""
+                }
+                type="button"
+                role="tab"
+                aria-selected={
+                  cardFilter === "all"
+                }
+                onClick={() =>
+                  setCardFilter("all")
+                }
+              >
+                All
+                <span>{cards.length}</span>
+              </button>
+            </div>
+
+            <div className="card-view-actions">
+              <button
+                className="small-view-button small-view-button-active"
+                type="button"
+              >
+                Grid
+              </button>
+
+              <button
+                className="small-view-button"
+                type="button"
+                disabled
+              >
+                List
+              </button>
+            </div>
           </div>
         </div>
 
-        {cards.length === 0 ? (
+        {visibleCards.length === 0 ? (
           <div className="empty-state collection-empty-state">
             <div className="empty-state-icon">
-              ▱
+              {cardFilter === "sold"
+                ? "✓"
+                : "▱"}
             </div>
 
             <h3>
-              Der er endnu ingen kort
+              {cardFilter === "sold"
+                ? "No sold cards yet"
+                : cardFilter === "active"
+                  ? "No active cards"
+                  : "There are no cards yet"}
             </h3>
 
             <p>
-              Tilføj dit første kort
-              manuelt, eller scan det
-              med AI-workflowet.
+              {cardFilter === "sold"
+                ? "Completed sales will appear here with their realized result."
+                : cardFilter === "active" && cards.length > 0
+                  ? "All cards in this collection have been sold. Open the Sold tab to see the history."
+                  : "Add your first card manually, or scan it with the AI workflow."}
             </p>
 
-            <button
-              className="primary-button"
-              type="button"
-              onClick={() =>
-                setShowAddCardChoice(
-                  true
-                )
-              }
-            >
-              ＋ Add first card
-            </button>
+            {cards.length === 0 && (
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() =>
+                  setShowAddCardChoice(
+                    true
+                  )
+                }
+              >
+                ＋ Add first card
+              </button>
+            )}
           </div>
         ) : (
           <div className="cards-grid">
-            {cards.map((card) => {
+            {visibleCards.map((card) => {
               const stateMeta =
                 getCardStateMeta(
                   card.state
@@ -959,31 +1556,85 @@ export default function CollectionPage() {
                         </span>
                       )}
 
-                      <div className="sports-card-values">
-                        <div>
-                          <span>
-                            Cost
-                          </span>
+                      {card.sale ? (
+                        <>
+                          <div className="sports-card-sale-meta">
+                            <span>
+                              Sold {formatShortDate(
+                                card.sale.occurred_at
+                              )}
+                            </span>
 
-                          <strong>
-                            {formatCurrency(
-                              card.purchase_price
+                            {card.sale.platform && (
+                              <strong>
+                                {card.sale.platform}
+                              </strong>
                             )}
-                          </strong>
-                        </div>
+                          </div>
 
-                        <div>
-                          <span>
-                            Value
-                          </span>
+                          <div className="sports-card-values sports-card-values-sold">
+                            <div>
+                              <span>
+                                Net
+                              </span>
 
-                          <strong>
-                            {formatCurrency(
-                              card.estimated_value
-                            )}
-                          </strong>
+                              <strong>
+                                {formatCurrency(
+                                  card.sale.net_amount,
+                                  card.sale.currency
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <span>
+                                Profit
+                              </span>
+
+                              <strong
+                                className={
+                                  card.sale.realized_profit >= 0
+                                    ? "card-profit-positive"
+                                    : "card-profit-negative"
+                                }
+                              >
+                                {formatCurrency(
+                                  card.sale.realized_profit,
+                                  card.sale.currency
+                                )}
+                              </strong>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="sports-card-values">
+                          <div>
+                            <span>
+                              Cost
+                            </span>
+
+                            <strong>
+                              {formatCurrency(
+                                card.purchase_price,
+                                collection.currency
+                              )}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>
+                              Value
+                            </span>
+
+                            <strong>
+                              {formatCurrency(
+                                card.estimated_value,
+                                collection.currency
+                              )}
+                            </strong>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className="sports-card-open-row">
                         <span>
@@ -1369,6 +2020,304 @@ export default function CollectionPage() {
       )}
 
       <style jsx>{`
+        .metric-value-positive {
+          color: #86efac;
+        }
+
+        .metric-value-negative {
+          color: #fca5a5;
+        }
+
+        .sales-performance-panel {
+          margin-top: 22px;
+          padding: 24px 26px;
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.13
+            );
+          border-radius: 22px;
+          background:
+            radial-gradient(
+              circle at top right,
+              rgba(
+                52,
+                211,
+                153,
+                0.06
+              ),
+              transparent 38%
+            ),
+            #10131b;
+        }
+
+        .sales-performance-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 18px;
+        }
+
+        .sales-performance-heading h2 {
+          margin: 6px 0 0;
+          color: #ffffff;
+          font-size: 21px;
+          letter-spacing: -0.025em;
+        }
+
+        .sales-performance-heading > div > p:last-child {
+          margin: 6px 0 0;
+          color: #71798b;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .view-sold-button {
+          min-height: 38px;
+          padding: 0 13px;
+          border: 1px solid
+            rgba(
+              52,
+              211,
+              153,
+              0.2
+            );
+          border-radius: 11px;
+          background: rgba(
+            16,
+            185,
+            129,
+            0.06
+          );
+          color: #a7f3d0;
+          font-size: 11px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .view-sold-button:hover:not(:disabled) {
+          border-color: rgba(
+            52,
+            211,
+            153,
+            0.42
+          );
+          background: rgba(
+            16,
+            185,
+            129,
+            0.1
+          );
+        }
+
+        .view-sold-button:disabled {
+          cursor: not-allowed;
+          opacity: 0.4;
+        }
+
+        .sales-summary-grid {
+          display: grid;
+          grid-template-columns:
+            repeat(
+              5,
+              minmax(0, 1fr)
+            );
+          gap: 10px;
+        }
+
+        .sales-metric-card {
+          min-width: 0;
+          padding: 16px;
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.11
+            );
+          border-radius: 15px;
+          background: rgba(
+            0,
+            0,
+            0,
+            0.14
+          );
+        }
+
+        .sales-metric-card > span {
+          display: block;
+          color: #71798b;
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .sales-metric-card > strong {
+          display: block;
+          margin-top: 8px;
+          color: #ffffff;
+          font-size: 18px;
+          letter-spacing: -0.02em;
+          overflow-wrap: anywhere;
+        }
+
+        .sales-metric-card > small {
+          display: block;
+          margin-top: 6px;
+          color: #5f687b;
+          font-size: 9px;
+          line-height: 1.4;
+        }
+
+        .sales-metric-positive > strong {
+          color: #86efac;
+        }
+
+        .sales-metric-negative > strong {
+          color: #fca5a5;
+        }
+
+        .cards-panel-header {
+          align-items: flex-start;
+        }
+
+        .cards-panel-controls {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .card-filter-tabs {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px;
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.12
+            );
+          border-radius: 12px;
+          background: rgba(
+            0,
+            0,
+            0,
+            0.13
+          );
+        }
+
+        .card-filter-tabs button {
+          min-height: 34px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 0 10px;
+          border: 0;
+          border-radius: 9px;
+          background: transparent;
+          color: #71798b;
+          font-size: 10px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .card-filter-tabs button:hover {
+          color: #ffffff;
+        }
+
+        .card-filter-tabs button span {
+          min-width: 20px;
+          padding: 3px 5px;
+          border-radius: 999px;
+          background: rgba(
+            255,
+            255,
+            255,
+            0.05
+          );
+          color: #8b93a5;
+          font-size: 8px;
+          text-align: center;
+        }
+
+        .card-filter-tabs .card-filter-active {
+          background: rgba(
+            124,
+            92,
+            255,
+            0.12
+          );
+          color: #ffffff;
+          box-shadow: 0 0 0 1px
+            rgba(
+              139,
+              92,
+              246,
+              0.13
+            );
+        }
+
+        .card-filter-tabs .card-filter-active span {
+          background: rgba(
+            139,
+            92,
+            246,
+            0.18
+          );
+          color: #c4b5fd;
+        }
+
+        .sports-card-sale-meta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin: 13px 0 0;
+          padding: 8px 9px;
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.1
+            );
+          border-radius: 10px;
+          background: rgba(
+            255,
+            255,
+            255,
+            0.02
+          );
+          color: #71798b;
+          font-size: 9px;
+        }
+
+        .sports-card-sale-meta strong {
+          color: #a5adbd;
+          font-size: 9px;
+          font-weight: 750;
+        }
+
+        .sports-card-values-sold {
+          margin-top: 10px;
+        }
+
+        .card-profit-positive {
+          color: #86efac !important;
+        }
+
+        .card-profit-negative {
+          color: #fca5a5 !important;
+        }
+
         .sports-card-link {
           min-width: 0;
           height: 100%;
@@ -1686,8 +2635,64 @@ export default function CollectionPage() {
         }
 
         @media (
+          max-width: 1150px
+        ) {
+          .sales-summary-grid {
+            grid-template-columns:
+              repeat(
+                3,
+                minmax(0, 1fr)
+              );
+          }
+        }
+
+        @media (
+          max-width: 760px
+        ) {
+          .sales-performance-heading,
+          .cards-panel-header {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .cards-panel-controls {
+            justify-content: space-between;
+          }
+
+          .sales-summary-grid {
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(0, 1fr)
+              );
+          }
+        }
+
+        @media (
           max-width: 520px
         ) {
+          .sales-performance-panel {
+            padding: 19px;
+          }
+
+          .sales-summary-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .cards-panel-controls {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .card-filter-tabs {
+            width: 100%;
+          }
+
+          .card-filter-tabs button {
+            flex: 1;
+            justify-content: center;
+          }
+
           .sports-card-image {
             padding: 8px;
           }
