@@ -9,6 +9,11 @@ import {
 } from "react";
 import { useParams } from "next/navigation";
 
+import EditCardModal from "@/components/cards/EditCardModal";
+import {
+  type EditableCardData,
+  type UpdateCardResult,
+} from "@/lib/cards/updateCard";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -259,6 +264,32 @@ function formatBoolean(
   return "Unknown";
 }
 
+function getSerialNumberedTo(
+  serialNumber: string | null
+) {
+  if (!serialNumber) {
+    return null;
+  }
+
+  const match =
+    serialNumber.match(
+      /\/\s*(\d+)\s*$/
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const parsedValue =
+    Number(match[1]);
+
+  return Number.isInteger(
+    parsedValue
+  ) && parsedValue > 0
+    ? parsedValue
+    : null;
+}
+
 function getCardStateMeta(
   state: string | null
 ): CardStateMeta {
@@ -338,6 +369,7 @@ function DetailItem({
         .join(" ")}
     >
       <span>{label}</span>
+
       <strong>
         {displayValue}
       </strong>
@@ -471,6 +503,11 @@ export default function CardDetailPage() {
     setMessage,
   ] = useState("");
 
+  const [
+    showEditCard,
+    setShowEditCard,
+  ] = useState(false);
+
   const loadCard =
     useCallback(async () => {
       if (!cardId) {
@@ -513,6 +550,8 @@ export default function CardDetailPage() {
         cardError ||
         !cardData
       ) {
+        setCard(null);
+
         setMessage(
           cardError?.message ??
             "Kortet blev ikke fundet."
@@ -576,6 +615,8 @@ export default function CardDetailPage() {
         setCollection(
           collectionResult.data as CollectionRow
         );
+      } else {
+        setCollection(null);
       }
 
       if (
@@ -585,6 +626,8 @@ export default function CardDetailPage() {
           (attributeResult.data ??
             []) as CardAttributeRow[]
         );
+      } else {
+        setAttributes([]);
       }
 
       const imageRows =
@@ -708,6 +751,18 @@ export default function CardDetailPage() {
     void loadCard();
   }, [loadCard]);
 
+  async function handleCardUpdated(
+    result: UpdateCardResult
+  ) {
+    setShowEditCard(false);
+
+    await loadCard();
+
+    setMessage(
+      result.message
+    );
+  }
+
   if (loading) {
     return (
       <main className="card-detail-page">
@@ -759,6 +814,13 @@ export default function CardDetailPage() {
       "team"
     );
 
+  const manufacturer =
+    getStringAttribute(
+      attributes,
+      "manufacturer"
+    ) ??
+    card.manufacturer;
+
   const brand =
     getStringAttribute(
       attributes,
@@ -777,6 +839,15 @@ export default function CardDetailPage() {
       "set_name"
     ) ??
     card.set_name;
+
+  const serialNumberedTo =
+    getNumberAttribute(
+      attributes,
+      "serial_numbered_to"
+    ) ??
+    getSerialNumberedTo(
+      card.serial_number
+    );
 
   const rookieCard =
     getBooleanAttribute(
@@ -895,7 +966,7 @@ export default function CardDetailPage() {
     joinDistinct([
       card.year,
       brand ??
-        card.manufacturer,
+        manufacturer,
       product,
       insertName,
     ]);
@@ -904,6 +975,57 @@ export default function CardDetailPage() {
     activeImage === "front"
       ? frontImageUrl
       : backImageUrl;
+
+  const editableCard:
+    EditableCardData = {
+      playerName:
+        card.player_name,
+
+      sport,
+
+      team,
+
+      manufacturer,
+
+      brand,
+
+      product,
+
+      setName:
+        insertName,
+
+      year:
+        card.year,
+
+      cardNumber:
+        card.card_number,
+
+      parallel:
+        card.parallel_name,
+
+      serialNumber:
+        card.serial_number,
+
+      serialNumberedTo,
+
+      rookieCard,
+
+      autograph,
+
+      memorabilia,
+
+      memorabiliaType,
+
+      gradingCompany,
+
+      grade,
+
+      certificationNumber,
+
+      language,
+
+      variation,
+    };
 
   return (
     <main className="card-detail-page">
@@ -960,12 +1082,15 @@ export default function CardDetailPage() {
 
         <div className="card-detail-actions">
           <button
+            className="detail-edit-action"
             type="button"
-            disabled
-            title="Coming soon"
+            onClick={() =>
+              setShowEditCard(
+                true
+              )
+            }
           >
             Edit card
-            <span>Soon</span>
           </button>
 
           <button
@@ -1149,7 +1274,7 @@ export default function CardDetailPage() {
               <DetailItem
                 label="Manufacturer"
                 value={
-                  card.manufacturer
+                  manufacturer
                 }
               />
 
@@ -1506,6 +1631,7 @@ export default function CardDetailPage() {
                   key={`${note}-${index}`}
                 >
                   <span>✦</span>
+
                   <p>{note}</p>
                 </div>
               )
@@ -1518,6 +1644,33 @@ export default function CardDetailPage() {
           </p>
         )}
       </section>
+
+      <EditCardModal
+        isOpen={showEditCard}
+        cardId={card.id}
+        initialCard={editableCard}
+        initialPurchasePrice={
+          purchasePrice
+        }
+        initialEstimatedValue={
+          estimatedValue
+        }
+        initialPurchaseSource={
+          purchaseSource
+        }
+        initialUserNotes={
+          card.notes
+        }
+        currency={currency}
+        onClose={() =>
+          setShowEditCard(false)
+        }
+        onUpdated={(result) => {
+          void handleCardUpdated(
+            result
+          );
+        }}
+      />
 
       <style jsx>{`
         .card-detail-page {
@@ -1768,6 +1921,42 @@ export default function CardDetailPage() {
           font-weight: 700;
         }
 
+        .detail-edit-action {
+          cursor: pointer;
+          border-color: rgba(
+            167,
+            139,
+            250,
+            0.26
+          ) !important;
+          background: rgba(
+            124,
+            92,
+            255,
+            0.08
+          ) !important;
+          color: #ddd6fe !important;
+          transition:
+            transform 150ms ease,
+            filter 150ms ease,
+            border-color 150ms ease;
+        }
+
+        .detail-edit-action:hover {
+          transform: translateY(
+            -1px
+          );
+          border-color: rgba(
+            167,
+            139,
+            250,
+            0.55
+          ) !important;
+          filter: brightness(
+            1.1
+          );
+        }
+
         .card-detail-actions button span,
         .detail-placeholder-action span {
           padding: 3px 5px;
@@ -1810,19 +1999,19 @@ export default function CardDetailPage() {
           padding: 12px 14px;
           border: 1px solid
             rgba(
-              251,
-              191,
-              36,
+              52,
+              211,
+              153,
               0.2
             );
           border-radius: 12px;
           background: rgba(
-            245,
-            158,
-            11,
+            16,
+            185,
+            129,
             0.06
           );
-          color: #d6b967;
+          color: #a7f3d0;
           font-size: 12px;
         }
 
