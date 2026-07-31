@@ -10,6 +10,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 
 import EditCardModal from "@/components/cards/EditCardModal";
+import MarketPricePanel from "@/components/cards/MarketPricePanel";
 import MoveCardModal from "@/components/cards/MoveCardModal";
 import RecordSaleModal from "@/components/cards/RecordSaleModal";
 import type {
@@ -36,6 +37,13 @@ type CardRow = {
   serial_number: string | null;
   purchase_price: number | null;
   estimated_value: number | null;
+  market_estimated_value: number | null;
+  market_value_low: number | null;
+  market_value_high: number | null;
+  market_value_currency: string | null;
+  market_value_confidence: number | null;
+  market_value_updated_at: string | null;
+  current_market_estimate_id: string | null;
   notes: string | null;
   state: string | null;
   created_at: string;
@@ -607,6 +615,13 @@ export default function CardDetailPage() {
           serial_number,
           purchase_price,
           estimated_value,
+          market_estimated_value,
+          market_value_low,
+          market_value_high,
+          market_value_currency,
+          market_value_confidence,
+          market_value_updated_at,
+          current_market_estimate_id,
           notes,
           state,
           created_at
@@ -1089,6 +1104,34 @@ export default function CardDetailPage() {
       ? null
       : Number(
           card.estimated_value
+        );
+
+  const marketEstimatedValue =
+    card.market_estimated_value === null
+      ? null
+      : Number(
+          card.market_estimated_value
+        );
+
+  const marketValueLow =
+    card.market_value_low === null
+      ? null
+      : Number(
+          card.market_value_low
+        );
+
+  const marketValueHigh =
+    card.market_value_high === null
+      ? null
+      : Number(
+          card.market_value_high
+        );
+
+  const marketValueConfidence =
+    card.market_value_confidence === null
+      ? null
+      : Number(
+          card.market_value_confidence
         );
 
   const unrealizedResult =
@@ -1800,6 +1843,70 @@ export default function CardDetailPage() {
             </section>
           )}
         </div>
+      </section>
+
+      <section className="market-price-section">
+        <MarketPricePanel
+          cardId={card.id}
+          currency={currency}
+          manualEstimate={estimatedValue}
+          purchasePrice={purchasePrice}
+          initialMarketPrice={{
+            estimatedValue:
+              marketEstimatedValue,
+            lowValue:
+              marketValueLow,
+            highValue:
+              marketValueHigh,
+            confidenceScore:
+              marketValueConfidence,
+            currency:
+              card.market_value_currency,
+            updatedAt:
+              card.market_value_updated_at,
+          }}
+          onUpdated={(result) => {
+            if (result.activated) {
+              setCard(
+                (currentCard) => {
+                  if (!currentCard) {
+                    return currentCard;
+                  }
+
+                  return {
+                    ...currentCard,
+                    market_estimated_value:
+                      result.estimate
+                        .estimatedValue,
+                    market_value_low:
+                      result.estimate
+                        .lowValue,
+                    market_value_high:
+                      result.estimate
+                        .highValue,
+                    market_value_currency:
+                      result.estimate
+                        .currency,
+                    market_value_confidence:
+                      result.estimate
+                        .confidenceScore,
+                    market_value_updated_at:
+                      result.estimate
+                        .dataAsOf ??
+                      result.estimate
+                        .updatedAt,
+                    current_market_estimate_id:
+                      result.estimate.id,
+                  };
+                }
+              );
+            }
+
+            setMessage(
+              result.message
+            );
+          }}
+        />
       </section>
 
       <section className="card-secondary-grid">
@@ -3064,6 +3171,11 @@ export default function CardDetailPage() {
 
         .detail-metric-negative strong {
           color: #fca5a5;
+        }
+
+        .market-price-section {
+          max-width: 1450px;
+          margin: 22px auto 0;
         }
 
         .card-secondary-grid {
