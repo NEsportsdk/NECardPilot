@@ -37,6 +37,13 @@ type CardRow = {
   serial_number: string | null;
   purchase_price: number | null;
   estimated_value: number | null;
+  market_estimated_value: number | null;
+  market_value_low: number | null;
+  market_value_high: number | null;
+  market_value_currency: string | null;
+  market_value_confidence: number | null;
+  market_value_updated_at: string | null;
+  current_market_estimate_id: string | null;
   state: string | null;
   created_at: string;
 };
@@ -98,6 +105,11 @@ type SaleTransaction = {
   reference: string | null;
 };
 
+type ValuationSource =
+  | "market"
+  | "manual"
+  | "none";
+
 type Card = CardRow & {
   front_image_url: string | null;
   sport: string | null;
@@ -108,6 +120,8 @@ type Card = CardRow & {
   ai_confidence: number | null;
   is_current_collection: boolean;
   sale: SaleTransaction | null;
+  valuation_value: number | null;
+  valuation_source: ValuationSource;
 };
 
 type CardFilter =
@@ -202,6 +216,71 @@ function toDatabaseNumber(
   return Number.isFinite(parsedValue)
     ? parsedValue
     : 0;
+}
+
+function toOptionalDatabaseNumber(
+  value: NumericDatabaseValue
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue)
+    ? parsedValue
+    : null;
+}
+
+function getCardValuation(
+  card: CardRow,
+  collectionCurrency: string
+): {
+  value: number | null;
+  source: ValuationSource;
+} {
+  const marketValue =
+    toOptionalDatabaseNumber(
+      card.market_estimated_value
+    );
+
+  const marketCurrency =
+    card.market_value_currency
+      ?.trim()
+      .toUpperCase() ||
+    collectionCurrency;
+
+  if (
+    marketValue !== null &&
+    marketCurrency ===
+      collectionCurrency
+  ) {
+    return {
+      value: marketValue,
+      source: "market",
+    };
+  }
+
+  const manualValue =
+    toOptionalDatabaseNumber(
+      card.estimated_value
+    );
+
+  if (manualValue !== null) {
+    return {
+      value: manualValue,
+      source: "manual",
+    };
+  }
+
+  return {
+    value: null,
+    source: "none",
+  };
 }
 
 function formatCurrency(
@@ -442,6 +521,13 @@ export default function CollectionPage() {
           serial_number,
           purchase_price,
           estimated_value,
+          market_estimated_value,
+          market_value_low,
+          market_value_high,
+          market_value_currency,
+          market_value_confidence,
+          market_value_updated_at,
+          current_market_estimate_id,
           state,
           created_at
         `)
@@ -558,6 +644,13 @@ export default function CollectionPage() {
             serial_number,
             purchase_price,
             estimated_value,
+            market_estimated_value,
+            market_value_low,
+            market_value_high,
+            market_value_currency,
+            market_value_confidence,
+            market_value_updated_at,
+            current_market_estimate_id,
             state,
             created_at
           `)
@@ -727,10 +820,20 @@ export default function CollectionPage() {
       );
     }
 
+    const collectionCurrency =
+      (collectionResult.data as Collection)
+        .currency;
+
     const enrichedCards: Card[] =
       rawCards.map((card) => {
         const cardAttributes =
           attributesByCardId.get(card.id) ?? [];
+
+        const valuation =
+          getCardValuation(
+            card,
+            collectionCurrency
+          );
 
         return {
           ...card,
@@ -780,6 +883,12 @@ export default function CollectionPage() {
 
           sale:
             saleByCardId.get(card.id) ?? null,
+
+          valuation_value:
+            valuation.value,
+
+          valuation_source:
+            valuation.source,
         };
       });
 
@@ -962,19 +1071,53 @@ export default function CollectionPage() {
       0
     );
 
-  const activeEstimatedValue =
+  const activePortfolioValue =
     activeCards.reduce(
       (total, card) =>
         total +
-        Number(
-          card.estimated_value ?? 0
-        ),
+        (card.valuation_value ?? 0),
       0
     );
 
   const activeUnrealizedResult =
-    activeEstimatedValue -
+    activePortfolioValue -
     activePurchasePrice;
+
+  const marketValuedCards =
+    activeCards.filter(
+      (card) =>
+        card.valuation_source ===
+        "market"
+    );
+
+  const manuallyValuedCards =
+    activeCards.filter(
+      (card) =>
+        card.valuation_source ===
+        "manual"
+    );
+
+  const unvaluedCards =
+    activeCards.filter(
+      (card) =>
+        card.valuation_source ===
+        "none"
+    );
+
+  const marketCoverage =
+    activeCards.length > 0
+      ? (marketValuedCards.length /
+          activeCards.length) *
+        100
+      : 0;
+
+  const totalValuationCoverage =
+    activeCards.length > 0
+      ? ((marketValuedCards.length +
+          manuallyValuedCards.length) /
+          activeCards.length) *
+        100
+      : 0;
 
   const soldGrossRevenue =
     saleTransactions.reduce(
@@ -1074,10 +1217,10 @@ export default function CollectionPage() {
               : "active cards"}{" "}
             ·{" "}
             {formatCurrency(
-              activeEstimatedValue,
+              activePortfolioValue,
               collection.currency
             )}{" "}
-            active value
+            blended portfolio value
             {saleTransactions.length > 0
               ? ` · ${saleTransactions.length} sold`
               : ""}
@@ -1158,7 +1301,7 @@ export default function CollectionPage() {
         <article className="metric-card metric-card-featured">
           <div className="metric-card-header">
             <span className="metric-label">
-              Active value
+              Portfolio value
             </span>
 
             <span className="metric-icon">
@@ -1168,13 +1311,13 @@ export default function CollectionPage() {
 
           <p className="metric-value">
             {formatCurrency(
-              activeEstimatedValue,
+              activePortfolioValue,
               collection.currency
             )}
           </p>
 
           <p className="metric-caption">
-            current estimated value
+            market value where available
           </p>
         </article>
 
@@ -1212,6 +1355,102 @@ export default function CollectionPage() {
             active portfolio difference
           </p>
         </article>
+      </section>
+
+      <section className="valuation-coverage-panel">
+        <div className="valuation-coverage-heading">
+          <div>
+            <p className="eyebrow">
+              Valuation coverage
+            </p>
+
+            <h2>
+              {marketCoverage.toLocaleString(
+                "da-DK",
+                {
+                  maximumFractionDigits: 0,
+                }
+              )}% market coverage
+            </h2>
+
+            <p>
+              Portfolio value uses the automatic market estimate first, then your own estimate, and finally 0 when no valuation exists.
+            </p>
+          </div>
+
+          <div className="valuation-coverage-total">
+            <span>
+              Total valuation coverage
+            </span>
+
+            <strong>
+              {totalValuationCoverage.toLocaleString(
+                "da-DK",
+                {
+                  maximumFractionDigits: 0,
+                }
+              )}%
+            </strong>
+          </div>
+        </div>
+
+        <div className="valuation-coverage-bar" aria-hidden="true">
+          <span
+            className="valuation-coverage-market"
+            style={{
+              width: `${marketCoverage}%`,
+            }}
+          />
+
+          <span
+            className="valuation-coverage-manual"
+            style={{
+              width: `${Math.max(
+                0,
+                totalValuationCoverage -
+                  marketCoverage
+              )}%`,
+            }}
+          />
+        </div>
+
+        <div className="valuation-coverage-stats">
+          <article>
+            <span className="coverage-dot coverage-dot-market" />
+            <div>
+              <strong>
+                {marketValuedCards.length}
+              </strong>
+              <small>
+                Market valued
+              </small>
+            </div>
+          </article>
+
+          <article>
+            <span className="coverage-dot coverage-dot-manual" />
+            <div>
+              <strong>
+                {manuallyValuedCards.length}
+              </strong>
+              <small>
+                Your estimate
+              </small>
+            </div>
+          </article>
+
+          <article>
+            <span className="coverage-dot coverage-dot-none" />
+            <div>
+              <strong>
+                {unvaluedCards.length}
+              </strong>
+              <small>
+                No valuation
+              </small>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section className="sales-performance-panel">
@@ -1607,33 +1846,74 @@ export default function CollectionPage() {
                           </div>
                         </>
                       ) : (
-                        <div className="sports-card-values">
-                          <div>
-                            <span>
-                              Cost
-                            </span>
+                        <>
+                          <div className="sports-card-values">
+                            <div>
+                              <span>
+                                Cost
+                              </span>
 
-                            <strong>
-                              {formatCurrency(
-                                card.purchase_price,
-                                collection.currency
-                              )}
-                            </strong>
+                              <strong>
+                                {formatCurrency(
+                                  card.purchase_price,
+                                  collection.currency
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <span>
+                                {card.valuation_source ===
+                                "market"
+                                  ? "Market"
+                                  : card.valuation_source ===
+                                      "manual"
+                                    ? "Your estimate"
+                                    : "Value"}
+                              </span>
+
+                              <strong>
+                                {formatCurrency(
+                                  card.valuation_value,
+                                  collection.currency
+                                )}
+                              </strong>
+                            </div>
                           </div>
 
-                          <div>
-                            <span>
-                              Value
+                          <div className="card-valuation-meta">
+                            <span
+                              className={`card-valuation-source card-valuation-${card.valuation_source}`}
+                            >
+                              {card.valuation_source ===
+                              "market"
+                                ? `Market${
+                                    card.market_value_confidence !==
+                                    null
+                                      ? ` ${Math.round(
+                                          card.market_value_confidence
+                                        )}%`
+                                      : ""
+                                  }`
+                                : card.valuation_source ===
+                                    "manual"
+                                  ? "Your estimate"
+                                  : "No valuation"}
                             </span>
 
-                            <strong>
-                              {formatCurrency(
-                                card.estimated_value,
-                                collection.currency
+                            {card.valuation_source ===
+                              "market" &&
+                              card.estimated_value !==
+                                null && (
+                                <small>
+                                  Yours: {formatCurrency(
+                                    card.estimated_value,
+                                    collection.currency
+                                  )}
+                                </small>
                               )}
-                            </strong>
                           </div>
-                        </div>
+                        </>
                       )}
 
                       <div className="sports-card-open-row">
@@ -2028,6 +2308,198 @@ export default function CollectionPage() {
           color: #fca5a5;
         }
 
+        .valuation-coverage-panel {
+          margin-top: 22px;
+          padding: 22px 24px;
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.13
+            );
+          border-radius: 22px;
+          background:
+            radial-gradient(
+              circle at top right,
+              rgba(
+                124,
+                92,
+                255,
+                0.08
+              ),
+              transparent 40%
+            ),
+            #10131b;
+        }
+
+        .valuation-coverage-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 24px;
+        }
+
+        .valuation-coverage-heading h2 {
+          margin: 6px 0 0;
+          color: #ffffff;
+          font-size: 21px;
+          letter-spacing: -0.025em;
+        }
+
+        .valuation-coverage-heading > div > p:last-child {
+          max-width: 760px;
+          margin: 6px 0 0;
+          color: #71798b;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .valuation-coverage-total {
+          flex: 0 0 auto;
+          min-width: 155px;
+          padding: 13px 15px;
+          border: 1px solid
+            rgba(
+              167,
+              139,
+              250,
+              0.18
+            );
+          border-radius: 14px;
+          background: rgba(
+            124,
+            92,
+            255,
+            0.06
+          );
+          text-align: right;
+        }
+
+        .valuation-coverage-total span {
+          display: block;
+          color: #8e96a8;
+          font-size: 9px;
+          font-weight: 750;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .valuation-coverage-total strong {
+          display: block;
+          margin-top: 6px;
+          color: #ddd6fe;
+          font-size: 22px;
+        }
+
+        .valuation-coverage-bar {
+          height: 10px;
+          display: flex;
+          overflow: hidden;
+          margin-top: 18px;
+          border-radius: 999px;
+          background: rgba(
+            148,
+            163,
+            184,
+            0.09
+          );
+        }
+
+        .valuation-coverage-bar span {
+          display: block;
+          height: 100%;
+          transition: width 220ms ease;
+        }
+
+        .valuation-coverage-market {
+          background: linear-gradient(
+            90deg,
+            #8b5cf6,
+            #a78bfa
+          );
+        }
+
+        .valuation-coverage-manual {
+          background: linear-gradient(
+            90deg,
+            #2563eb,
+            #60a5fa
+          );
+        }
+
+        .valuation-coverage-stats {
+          display: grid;
+          grid-template-columns:
+            repeat(
+              3,
+              minmax(0, 1fr)
+            );
+          gap: 10px;
+          margin-top: 15px;
+        }
+
+        .valuation-coverage-stats article {
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 13px;
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.1
+            );
+          border-radius: 13px;
+          background: rgba(
+            0,
+            0,
+            0,
+            0.12
+          );
+        }
+
+        .coverage-dot {
+          flex: 0 0 auto;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+        }
+
+        .coverage-dot-market {
+          background: #a78bfa;
+          box-shadow: 0 0 12px
+            rgba(
+              167,
+              139,
+              250,
+              0.45
+            );
+        }
+
+        .coverage-dot-manual {
+          background: #60a5fa;
+        }
+
+        .coverage-dot-none {
+          background: #4b5563;
+        }
+
+        .valuation-coverage-stats strong {
+          display: block;
+          color: #ffffff;
+          font-size: 16px;
+        }
+
+        .valuation-coverage-stats small {
+          display: block;
+          margin-top: 2px;
+          color: #71798b;
+          font-size: 9px;
+        }
+
         .sales-performance-panel {
           margin-top: 22px;
           padding: 24px 26px;
@@ -2308,6 +2780,83 @@ export default function CollectionPage() {
 
         .sports-card-values-sold {
           margin-top: 10px;
+        }
+
+        .card-valuation-meta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 10px;
+        }
+
+        .card-valuation-source {
+          display: inline-flex;
+          align-items: center;
+          min-height: 24px;
+          padding: 0 8px;
+          border-radius: 999px;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+
+        .card-valuation-market {
+          border: 1px solid
+            rgba(
+              167,
+              139,
+              250,
+              0.24
+            );
+          background: rgba(
+            139,
+            92,
+            246,
+            0.08
+          );
+          color: #c4b5fd;
+        }
+
+        .card-valuation-manual {
+          border: 1px solid
+            rgba(
+              96,
+              165,
+              250,
+              0.2
+            );
+          background: rgba(
+            59,
+            130,
+            246,
+            0.06
+          );
+          color: #bfdbfe;
+        }
+
+        .card-valuation-none {
+          border: 1px solid
+            rgba(
+              148,
+              163,
+              184,
+              0.13
+            );
+          background: rgba(
+            148,
+            163,
+            184,
+            0.04
+          );
+          color: #71798b;
+        }
+
+        .card-valuation-meta small {
+          color: #697286;
+          font-size: 8px;
+          text-align: right;
         }
 
         .card-profit-positive {
@@ -2649,6 +3198,23 @@ export default function CollectionPage() {
         @media (
           max-width: 760px
         ) {
+          .valuation-coverage-heading {
+            flex-direction: column;
+          }
+
+          .valuation-coverage-total {
+            width: 100%;
+            text-align: left;
+          }
+
+          .valuation-coverage-stats {
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(0, 1fr)
+              );
+          }
+
           .sales-performance-heading,
           .cards-panel-header {
             align-items: stretch;
@@ -2671,8 +3237,13 @@ export default function CollectionPage() {
         @media (
           max-width: 520px
         ) {
+          .valuation-coverage-panel,
           .sales-performance-panel {
             padding: 19px;
+          }
+
+          .valuation-coverage-stats {
+            grid-template-columns: 1fr;
           }
 
           .sales-summary-grid {
