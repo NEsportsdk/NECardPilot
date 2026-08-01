@@ -144,7 +144,7 @@ const navigation: NavigationItem[] = [
   { label: "Scanner", icon: "◎", comingSoon: true },
   { label: "Grading", icon: "◈", comingSoon: true },
   { label: "Transactions", icon: "↕", href: "/transactions" },
-  { label: "Analytics", icon: "⌁", targetId: "analytics" },
+  { label: "Analytics", icon: "⌁", href: "/analytics" },
 ];
 
 function toDatabaseNumber(value: NumericDatabaseValue) {

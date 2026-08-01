@@ -159,7 +159,7 @@ const navigation: NavigationItem[] = [
   { label: "Scanner", icon: "\u25CE", comingSoon: true },
   { label: "Grading", icon: "\u25C8", comingSoon: true },
   { label: "Transactions", icon: "\u2195", active: true },
-  { label: "Analytics", icon: "\u2301", href: "/#analytics" },
+  { label: "Analytics", icon: "\u2301", href: "/analytics" },
 ];
 
 const ATTRIBUTE_KEYS = [
