@@ -132,7 +132,7 @@ const navigation: NavigationItem[] = [
   { label: "Cards", icon: "▱", active: true },
   { label: "Scanner", icon: "◎", comingSoon: true },
   { label: "Grading", icon: "◈", comingSoon: true },
-  { label: "Transactions", icon: "↕", href: "/#sales" },
+  { label: "Transactions", icon: "↕", href: "/transactions" },
   { label: "Analytics", icon: "⌁", href: "/#analytics" },
 ];
 

@@ -119,6 +119,7 @@ type CollectionSummary = Collection & {
 type NavigationItem = {
   label: string;
   icon: string;
+  href?: string;
   targetId?: string;
   active?: boolean;
   comingSoon?: boolean;
@@ -139,10 +140,10 @@ type ActivityItem = {
 const navigation: NavigationItem[] = [
   { label: "Home", icon: "⌂", active: true },
   { label: "Collections", icon: "◇", targetId: "collections" },
-  { label: "Cards", icon: "▱", targetId: "recent-cards" },
+  { label: "Cards", icon: "▱", href: "/cards" },
   { label: "Scanner", icon: "◎", comingSoon: true },
   { label: "Grading", icon: "◈", comingSoon: true },
-  { label: "Transactions", icon: "↕", targetId: "sales" },
+  { label: "Transactions", icon: "↕", href: "/transactions" },
   { label: "Analytics", icon: "⌁", targetId: "analytics" },
 ];
 
@@ -632,6 +633,11 @@ export default function HomePage() {
 
     if (item.active) {
       window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (item.href) {
+      router.push(item.href);
       return;
     }
 
