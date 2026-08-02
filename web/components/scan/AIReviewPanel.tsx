@@ -1833,22 +1833,58 @@ export default function AIReviewPanel({
 
         @media (max-width: 680px) {
           .review-layout {
-            padding: 20px;
+            gap: 17px;
+            padding: 17px 16px 24px;
+          }
+
+          .review-images {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .review-image-card {
+            min-height: 150px;
+            padding: 8px;
+            border-radius: 14px;
+          }
+
+          .review-image-card img {
+            max-height: 235px;
+          }
+
+          .review-image-card > span {
+            top: 7px;
+            left: 7px;
+            padding: 4px 6px;
+            font-size: 8px;
+          }
+
+          .review-main {
+            gap: 14px;
+          }
+
+          .review-card {
+            padding: 18px;
+            border-radius: 17px;
           }
 
           .review-heading {
             flex-direction: column;
+            gap: 13px;
+            padding-bottom: 18px;
+          }
+
+          .review-heading h3 {
+            font-size: 23px;
           }
 
           .review-confidence {
             width: 100%;
+            padding: 11px;
           }
 
           .review-grid,
-          .finance-grid {
-            grid-template-columns: 1fr;
-          }
-
+          .finance-grid,
           .review-feature-grid {
             grid-template-columns: 1fr;
           }
@@ -1860,24 +1896,33 @@ export default function AIReviewPanel({
           .review-footer {
             align-items: stretch;
             flex-direction: column;
-            padding-left: 20px;
-            padding-right: 20px;
+            gap: 10px;
+            padding:
+              14px
+              16px
+              calc(14px + env(safe-area-inset-bottom));
+          }
+
+          .review-footer > p {
+            display: none;
           }
 
           .review-actions {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
           }
 
           .scan-again-button,
           .save-card-button {
             width: 100%;
             min-width: 0;
+            min-height: 52px;
           }
         }
 
-        @media (max-width: 520px) {
-          .review-images {
+        @media (max-width: 360px) {
+          .review-images,
+          .review-actions {
             grid-template-columns: 1fr;
           }
         }
