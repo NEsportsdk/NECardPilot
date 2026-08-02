@@ -130,7 +130,7 @@ const navigation: NavigationItem[] = [
   { label: "Home", icon: "⌂", href: "/" },
   { label: "Collections", icon: "◇", href: "/#collections" },
   { label: "Cards", icon: "▱", active: true },
-  { label: "Scanner", icon: "◎", comingSoon: true },
+  { label: "Scanner", icon: "◎", href: "/scanner" },
   { label: "Grading", icon: "◈", comingSoon: true },
   { label: "Transactions", icon: "↕", href: "/transactions" },
   { label: "Analytics", icon: "⌁", href: "/analytics" },
@@ -942,20 +942,7 @@ export default function GlobalCardsPage() {
 
   function handleScanCard() {
     setShowAddCard(false);
-
-    if (collections.length === 0) {
-      setMessage("Opret en collection, før du scanner dit første kort.");
-      return;
-    }
-
-    if (collections.length === 1) {
-      router.push(`/collections/${collections[0].id}`);
-      return;
-    }
-
-    setMessage(
-      "Åbn den ønskede collection og vælg Scan card, så kortet bliver placeret korrekt."
-    );
+    router.push("/scanner");
   }
 
   function handleManualCard(collectionId: string) {

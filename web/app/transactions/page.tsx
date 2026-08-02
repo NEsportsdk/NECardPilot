@@ -156,7 +156,7 @@ const navigation: NavigationItem[] = [
   { label: "Home", icon: "\u2302", href: "/" },
   { label: "Collections", icon: "\u25C7", href: "/#collections" },
   { label: "Cards", icon: "\u25B1", href: "/cards" },
-  { label: "Scanner", icon: "\u25CE", comingSoon: true },
+  { label: "Scanner", icon: "\u25CE", href: "/scanner" },
   { label: "Grading", icon: "\u25C8", comingSoon: true },
   { label: "Transactions", icon: "\u2195", active: true },
   { label: "Analytics", icon: "\u2301", href: "/analytics" },

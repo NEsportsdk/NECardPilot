@@ -142,7 +142,7 @@ const navigation: NavigationItem[] = [
   { label: "Home", icon: "⌂", href: "/" },
   { label: "Collections", icon: "◇", href: "/#collections" },
   { label: "Cards", icon: "▱", href: "/cards" },
-  { label: "Scanner", icon: "◎", comingSoon: true },
+  { label: "Scanner", icon: "◎", href: "/scanner" },
   { label: "Grading", icon: "◈", comingSoon: true },
   { label: "Transactions", icon: "↕", href: "/transactions" },
   { label: "Analytics", icon: "⌁", active: true },
