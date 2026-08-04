@@ -1,3 +1,4 @@
+import { createId } from "@/lib/createId";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -162,7 +163,7 @@ export async function uploadCardImages({
     throw new Error("Du skal være logget ind for at uploade kortbilleder.");
   }
 
-  const scanId = crypto.randomUUID();
+  const scanId = createId();
   const safeCollectionId = collectionId.replace(/[^a-zA-Z0-9-_]/g, "");
 
   const frontPath = [

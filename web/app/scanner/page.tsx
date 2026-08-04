@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -44,6 +45,20 @@ type NavigationItem = {
 const SELECTED_COLLECTION_KEY =
   "necardpilot.scanner.selectedCollectionId";
 
+const CONTINUOUS_MODE_KEY =
+  "necardpilot.scanner.continuousMode";
+
+const SESSION_STATE_KEY =
+  "necardpilot.scanner.sessionState";
+
+const AUTO_CONTINUE_DELAY_MS = 2200;
+
+type PersistedScannerSession = {
+  startedAt: string | null;
+  entries: SessionEntry[];
+  finished: boolean;
+};
+
 const navigation: NavigationItem[] = [
   { label: "Home", icon: "⌂", href: "/" },
   { label: "Collections", icon: "◇", href: "/#collections" },
@@ -75,6 +90,66 @@ function getReadableError(error: unknown) {
   return "Scanneren kunne ikke indlæses. Prøv igen.";
 }
 
+function isSessionEntry(value: unknown): value is SessionEntry {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+
+  const entry = value as Record<string, unknown>;
+
+  return (
+    typeof entry.cardId === "string" &&
+    (entry.state === "verified" || entry.state === "needs_review") &&
+    typeof entry.message === "string" &&
+    typeof entry.collectionId === "string" &&
+    typeof entry.collectionName === "string" &&
+    typeof entry.savedAt === "string"
+  );
+}
+
+function readPersistedSession(): PersistedScannerSession | null {
+  try {
+    const rawValue = window.sessionStorage.getItem(
+      SESSION_STATE_KEY
+    );
+
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsedValue = JSON.parse(rawValue) as unknown;
+
+    if (
+      typeof parsedValue !== "object" ||
+      parsedValue === null ||
+      Array.isArray(parsedValue)
+    ) {
+      return null;
+    }
+
+    const session = parsedValue as Record<string, unknown>;
+    const entries = Array.isArray(session.entries)
+      ? session.entries.filter(isSessionEntry)
+      : [];
+
+    return {
+      startedAt:
+        typeof session.startedAt === "string"
+          ? session.startedAt
+          : null,
+      entries,
+      finished: session.finished === true,
+    };
+  } catch (error) {
+    console.error("Scanner session could not be restored:", error);
+    return null;
+  }
+}
+
 export default function ScannerPage() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -91,6 +166,107 @@ export default function ScannerPage() {
   const [lastSaved, setLastSaved] =
     useState<SessionEntry | null>(null);
   const [sessionFinished, setSessionFinished] = useState(false);
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [autoContinueSeconds, setAutoContinueSeconds] =
+    useState<number | null>(null);
+  const [sessionRestored, setSessionRestored] = useState(false);
+
+  const autoContinueTimeoutRef = useRef<number | null>(null);
+  const autoContinueIntervalRef = useRef<number | null>(null);
+
+  const cancelAutoContinue = useCallback(() => {
+    if (autoContinueTimeoutRef.current !== null) {
+      window.clearTimeout(autoContinueTimeoutRef.current);
+      autoContinueTimeoutRef.current = null;
+    }
+
+    if (autoContinueIntervalRef.current !== null) {
+      window.clearInterval(autoContinueIntervalRef.current);
+      autoContinueIntervalRef.current = null;
+    }
+
+    setAutoContinueSeconds(null);
+  }, []);
+
+  const scheduleAutoContinue = useCallback(() => {
+    cancelAutoContinue();
+
+    const startedAt = Date.now();
+    setAutoContinueSeconds(
+      Math.ceil(AUTO_CONTINUE_DELAY_MS / 1000)
+    );
+
+    autoContinueIntervalRef.current = window.setInterval(() => {
+      const remainingMilliseconds = Math.max(
+        0,
+        AUTO_CONTINUE_DELAY_MS - (Date.now() - startedAt)
+      );
+
+      setAutoContinueSeconds(
+        remainingMilliseconds > 0
+          ? Math.ceil(remainingMilliseconds / 1000)
+          : null
+      );
+    }, 200);
+
+    autoContinueTimeoutRef.current = window.setTimeout(() => {
+      cancelAutoContinue();
+      setLastSaved(null);
+      setShowScanner(true);
+    }, AUTO_CONTINUE_DELAY_MS);
+  }, [cancelAutoContinue]);
+
+  useEffect(() => {
+    const storedMode = window.localStorage.getItem(
+      CONTINUOUS_MODE_KEY
+    );
+
+    setContinuousMode(storedMode === "true");
+
+    const storedSession = readPersistedSession();
+
+    if (storedSession) {
+      setSessionStartedAt(storedSession.startedAt);
+      setSessionEntries(storedSession.entries);
+      setSessionFinished(storedSession.finished);
+    }
+
+    setSessionRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (!sessionRestored) {
+      return;
+    }
+
+    const persistedSession: PersistedScannerSession = {
+      startedAt: sessionStartedAt,
+      entries: sessionEntries,
+      finished: sessionFinished,
+    };
+
+    window.sessionStorage.setItem(
+      SESSION_STATE_KEY,
+      JSON.stringify(persistedSession)
+    );
+  }, [
+    sessionEntries,
+    sessionFinished,
+    sessionRestored,
+    sessionStartedAt,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (autoContinueTimeoutRef.current !== null) {
+        window.clearTimeout(autoContinueTimeoutRef.current);
+      }
+
+      if (autoContinueIntervalRef.current !== null) {
+        window.clearInterval(autoContinueIntervalRef.current);
+      }
+    };
+  }, []);
 
   const loadCollections = useCallback(async () => {
     setLoading(true);
@@ -180,6 +356,9 @@ export default function ScannerPage() {
     [collections, selectedCollectionId]
   );
 
+  const destinationLocked =
+    sessionEntries.length > 0 && !sessionFinished;
+
   const verifiedCount = sessionEntries.filter(
     (entry) => entry.state === "verified"
   ).length;
@@ -189,6 +368,16 @@ export default function ScannerPage() {
   ).length;
 
   function handleSelectCollection(collectionId: string) {
+    if (
+      destinationLocked &&
+      collectionId !== selectedCollectionId
+    ) {
+      setErrorMessage(
+        "Finish the current session before changing its destination collection."
+      );
+      return;
+    }
+
     setSelectedCollectionId(collectionId);
     setErrorMessage(null);
 
@@ -204,7 +393,21 @@ export default function ScannerPage() {
     }
   }
 
+  function handleContinuousModeChange(enabled: boolean) {
+    setContinuousMode(enabled);
+    window.localStorage.setItem(
+      CONTINUOUS_MODE_KEY,
+      String(enabled)
+    );
+
+    if (!enabled) {
+      cancelAutoContinue();
+    }
+  }
+
   function handleStartScanner() {
+    cancelAutoContinue();
+
     if (!selectedCollection) {
       setErrorMessage(
         "Vælg den collection, kortet skal gemmes i."
@@ -246,15 +449,28 @@ export default function ScannerPage() {
       ...currentEntries,
     ]);
     setLastSaved(entry);
+
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.vibrate === "function"
+    ) {
+      navigator.vibrate(70);
+    }
+
+    if (continuousMode) {
+      scheduleAutoContinue();
+    }
   }
 
   function handleFinishSession() {
+    cancelAutoContinue();
     setShowScanner(false);
     setLastSaved(null);
     setSessionFinished(true);
   }
 
   function handleNewSession() {
+    cancelAutoContinue();
     setSessionEntries([]);
     setLastSaved(null);
     setSessionStartedAt(null);
@@ -428,6 +644,29 @@ export default function ScannerPage() {
                     </span>
                     <span>{formatTime(lastSaved.savedAt)}</span>
                   </div>
+
+                  {autoContinueSeconds !== null && (
+                    <div className="auto-continue-banner">
+                      <span className="auto-continue-spinner" />
+
+                      <div>
+                        <strong>
+                          Next scan opens in {autoContinueSeconds}s
+                        </strong>
+                        <p>
+                          Continuous mode keeps the review step, then
+                          prepares a fresh front-and-back capture.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={cancelAutoContinue}
+                      >
+                        Pause
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="success-actions">
@@ -590,6 +829,10 @@ export default function ScannerPage() {
                   <p className="eyebrow">Destination</p>
                   <h2>Save cards to</h2>
                 </div>
+
+                {destinationLocked && (
+                  <span className="destination-lock">Locked</span>
+                )}
               </div>
 
               {loading ? (
@@ -615,6 +858,10 @@ export default function ScannerPage() {
                           isSelected
                             ? "destination-option-selected"
                             : ""
+                        } ${
+                          destinationLocked && !isSelected
+                            ? "destination-option-locked"
+                            : ""
                         }`}
                         key={collection.id}
                       >
@@ -623,6 +870,7 @@ export default function ScannerPage() {
                           name="scanner-collection"
                           value={collection.id}
                           checked={isSelected}
+                          disabled={destinationLocked && !isSelected}
                           onChange={() =>
                             handleSelectCollection(collection.id)
                           }
@@ -652,6 +900,33 @@ export default function ScannerPage() {
               )}
             </section>
 
+            <section className="panel continuous-mode-panel">
+              <div className="continuous-mode-copy">
+                <p className="eyebrow">Session mode</p>
+                <h2>Continuous scanning</h2>
+                <p>
+                  After each reviewed and saved card, NECardPilot opens
+                  a fresh scanner automatically. The camera itself still
+                  requires a tap on iPhone.
+                </p>
+              </div>
+
+              <button
+                className={`mode-switch ${
+                  continuousMode ? "mode-switch-active" : ""
+                }`}
+                type="button"
+                role="switch"
+                aria-checked={continuousMode}
+                onClick={() =>
+                  handleContinuousModeChange(!continuousMode)
+                }
+              >
+                <span />
+                <strong>{continuousMode ? "On" : "Off"}</strong>
+              </button>
+            </section>
+
             <section className="panel mobile-note-panel">
               <span className="note-icon">⌁</span>
               <div>
@@ -666,10 +941,10 @@ export default function ScannerPage() {
 
             <section className="panel coming-next-panel">
               <p className="eyebrow">Coming next</p>
-              <h2>Scanner queue</h2>
+              <h2>Offline-safe queue</h2>
               <p>
-                The next scanner sprint adds queued cards, retry after
-                network errors and identify-only mode for card shows.
+                A later scanner sprint adds retry after network errors,
+                identify-only mode and a true offline capture queue.
               </p>
             </section>
           </aside>
@@ -681,6 +956,7 @@ export default function ScannerPage() {
           <span>Destination</span>
           <strong>
             {selectedCollection?.name ?? "Choose collection"}
+            {continuousMode ? " · Continuous" : ""}
           </strong>
         </div>
 
@@ -1067,7 +1343,135 @@ export default function ScannerPage() {
           margin: 22px auto 0;
         }
 
-        .scanner-main-column,
+        .scanner-main-column {
+          min-width: 0;
+          display: grid;
+          align-content: start;
+          gap: 18px;
+        }
+
+        .auto-continue-banner {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 12px;
+          margin-top: 15px;
+          padding: 13px 14px;
+          border: 1px solid rgba(167, 139, 250, 0.22);
+          border-radius: 14px;
+          background: rgba(124, 92, 255, 0.07);
+        }
+
+        .auto-continue-spinner {
+          width: 22px;
+          height: 22px;
+          border: 2px solid rgba(196, 181, 253, 0.2);
+          border-top-color: #c4b5fd;
+          border-radius: 50%;
+          animation: scanner-spin 700ms linear infinite;
+        }
+
+        .auto-continue-banner strong {
+          color: #ddd6fe;
+          font-size: 11px;
+        }
+
+        .auto-continue-banner p {
+          margin: 4px 0 0;
+          color: #8f86ad;
+          font-size: 9px;
+          line-height: 1.45;
+        }
+
+        .auto-continue-banner button {
+          min-height: 34px;
+          padding: 0 10px;
+          border: 1px solid rgba(167, 139, 250, 0.2);
+          border-radius: 9px;
+          background: rgba(0, 0, 0, 0.12);
+          color: #c4b5fd;
+          font: inherit;
+          font-size: 9px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .destination-lock {
+          padding: 5px 8px;
+          border: 1px solid rgba(251, 191, 36, 0.18);
+          border-radius: 999px;
+          background: rgba(245, 158, 11, 0.06);
+          color: #fde68a;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .destination-option-locked {
+          cursor: not-allowed;
+          opacity: 0.42;
+        }
+
+        .continuous-mode-panel {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 18px;
+        }
+
+        .continuous-mode-copy h2 {
+          margin: 6px 0 0;
+          color: #ffffff;
+          font-size: 16px;
+        }
+
+        .continuous-mode-copy p:last-child {
+          margin: 7px 0 0;
+          color: #71798b;
+          font-size: 10px;
+          line-height: 1.5;
+        }
+
+        .mode-switch {
+          width: 75px;
+          min-height: 38px;
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+          gap: 7px;
+          padding: 4px 8px 4px 4px;
+          border: 1px solid rgba(148, 163, 184, 0.16);
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.025);
+          color: #71798b;
+          font: inherit;
+          cursor: pointer;
+        }
+
+        .mode-switch > span {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: #3b4150;
+          transition: transform 160ms ease, background 160ms ease;
+        }
+
+        .mode-switch strong {
+          font-size: 9px;
+          text-transform: uppercase;
+        }
+
+        .mode-switch-active {
+          border-color: rgba(52, 211, 153, 0.24);
+          background: rgba(16, 185, 129, 0.07);
+          color: #a7f3d0;
+        }
+
+        .mode-switch-active > span {
+          background: #34d399;
+        }
+
         .scanner-side-column {
           min-width: 0;
           display: grid;
@@ -1658,6 +2062,24 @@ export default function ScannerPage() {
 
           .start-visual div {
             width: 27px;
+          }
+
+          .auto-continue-banner {
+            grid-template-columns: auto minmax(0, 1fr);
+          }
+
+          .auto-continue-banner button {
+            grid-column: 1 / -1;
+            width: 100%;
+          }
+
+          .continuous-mode-panel {
+            grid-template-columns: 1fr;
+          }
+
+          .mode-switch {
+            width: 100%;
+            grid-template-columns: auto minmax(0, 1fr);
           }
 
           .mobile-start-bar {
