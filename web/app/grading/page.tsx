@@ -9,9 +9,22 @@ import {
 } from "react";
 
 import CreateGradingSubmissionModal from "@/components/grading/CreateGradingSubmissionModal";
+import RecordGradingResultModal, {
+  type GradingResultCardSummary,
+} from "@/components/grading/RecordGradingResultModal";
+import TransitionGradingSubmissionModal, {
+  type GradingSubmissionTransitionSummary,
+} from "@/components/grading/TransitionGradingSubmissionModal";
 import type {
   CreateGradingSubmissionResult,
 } from "@/lib/grading/createGradingSubmission";
+import type {
+  GradingSubgrades,
+  RecordGradingResultResult,
+} from "@/lib/grading/recordGradingResult";
+import type {
+  TransitionGradingSubmissionResult,
+} from "@/lib/grading/transitionGradingSubmission";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -119,6 +132,7 @@ type GradingSubmissionCardRow = {
   expected_graded_value: NumericDatabaseValue;
   result_grade: string | null;
   result_qualifier: string | null;
+  result_subgrades: unknown;
   certification_number: string | null;
   result_market_value: NumericDatabaseValue;
   result_notes: string | null;
@@ -172,6 +186,7 @@ type SubmissionCard = GradingSubmissionCardRow & {
   rawValueSnapshot: number | null;
   expectedGradedValue: number | null;
   resultMarketValue: number | null;
+  resultSubgrades: GradingSubgrades | null;
 };
 
 type GradingSubmission = GradingSubmissionRow & {
@@ -416,6 +431,66 @@ function getCollectionTypeLabel(type: CollectionType) {
     : "Dealer Inventory";
 }
 
+function getNextTransitionLabel(
+  status: GradingSubmissionStatus
+) {
+  switch (status) {
+    case "draft":
+      return "Mark ready";
+    case "ready":
+      return "Mark shipped";
+    case "shipped":
+      return "Mark received";
+    case "received":
+      return "Start grading";
+    case "grading":
+      return "Mark grades ready";
+    case "grades_ready":
+      return "Mark returned";
+    case "returned":
+      return "Complete submission";
+    case "completed":
+    case "cancelled":
+      return null;
+  }
+}
+
+function canRecordGradingResult(
+  status: GradingSubmissionStatus,
+  cardStatus: SubmissionCardStatus
+) {
+  return (
+    ["grading", "grades_ready"].includes(status) &&
+    !["cancelled", "returned"].includes(cardStatus)
+  );
+}
+
+function normalizeGradingSubgrades(
+  value: unknown
+): GradingSubgrades | null {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return null;
+  }
+
+  const entries = Object.entries(value).filter(
+    ([key, entryValue]) =>
+      Boolean(key.trim()) &&
+      (typeof entryValue === "string" ||
+        typeof entryValue === "number" ||
+        entryValue === null)
+  );
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return Object.fromEntries(entries) as GradingSubgrades;
+}
+
 export default function GradingCenterPage() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -430,6 +505,10 @@ export default function GradingCenterPage() {
     useState<SortOption>("newest");
   const [expandedSubmissionIds, setExpandedSubmissionIds] =
     useState<Set<string>>(() => new Set());
+  const [transitionSubmission, setTransitionSubmission] =
+    useState<GradingSubmissionTransitionSummary | null>(null);
+  const [resultCard, setResultCard] =
+    useState<GradingResultCardSummary | null>(null);
 
   const loadGradingCenter = useCallback(async () => {
     setLoading(true);
@@ -535,6 +614,7 @@ export default function GradingCenterPage() {
         expected_graded_value,
         result_grade,
         result_qualifier,
+        result_subgrades,
         certification_number,
         result_market_value,
         result_notes,
@@ -695,6 +775,7 @@ export default function GradingCenterPage() {
         rawValueSnapshot: toOptionalNumber(row.raw_value_snapshot),
         expectedGradedValue: toOptionalNumber(row.expected_graded_value),
         resultMarketValue: toOptionalNumber(row.result_market_value),
+        resultSubgrades: normalizeGradingSubgrades(row.result_subgrades),
       };
 
       const currentCards = cardsBySubmissionId.get(row.submission_id) ?? [];
@@ -878,6 +959,91 @@ export default function GradingCenterPage() {
       const nextIds = new Set(currentIds);
       nextIds.add(result.submissionId);
       return nextIds;
+    });
+  }
+
+  async function handleTransitioned(
+    result: TransitionGradingSubmissionResult
+  ) {
+    setTransitionSubmission(null);
+    await loadGradingCenter();
+    setMessage(result.message);
+    setExpandedSubmissionIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      nextIds.add(result.submissionId);
+      return nextIds;
+    });
+  }
+
+  async function handleResultRecorded(
+    result: RecordGradingResultResult
+  ) {
+    setResultCard(null);
+    await loadGradingCenter();
+    setMessage(result.message);
+    setExpandedSubmissionIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      nextIds.add(result.submissionId);
+      return nextIds;
+    });
+  }
+
+  function openTransitionModal(submission: GradingSubmission) {
+    setMessage("");
+    setTransitionSubmission({
+      id: submission.id,
+      name: submission.name,
+      gradingCompany: submission.grading_company,
+      status: submission.status,
+      cardCount: submission.cards.length,
+      submissionNumber: submission.submission_number,
+      outboundTrackingNumber: submission.outbound_tracking_number,
+      returnTrackingNumber: submission.return_tracking_number,
+    });
+  }
+
+  function openResultModal(
+    submission: GradingSubmission,
+    submissionCard: SubmissionCard
+  ) {
+    const card = submissionCard.card;
+
+    if (!card) {
+      setMessage("Card details are unavailable for this grading result.");
+      return;
+    }
+
+    const cardSubtitle =
+      joinDistinct([
+        card.year,
+        submissionCard.brand ?? card.manufacturer,
+        submissionCard.product,
+        submissionCard.insertName,
+        card.card_number ? `#${card.card_number}` : null,
+        card.parallel_name,
+        card.serial_number,
+      ]) || null;
+
+    setMessage("");
+    setResultCard({
+      submissionCardId: submissionCard.id,
+      cardId: card.id,
+      playerName: card.player_name,
+      cardSubtitle,
+      gradingCompany: submission.grading_company,
+      currency: submission.currency,
+      expectedGrade: submissionCard.expected_grade,
+      expectedGradedValue: submissionCard.expectedGradedValue,
+      rawValueSnapshot: submissionCard.rawValueSnapshot,
+      totalGradingCost: submissionCard.totalGradingCost,
+      resultGrade: submissionCard.result_grade,
+      resultQualifier: submissionCard.result_qualifier,
+      certificationNumber: submissionCard.certification_number,
+      resultMarketValue: submissionCard.resultMarketValue,
+      resultNotes: submissionCard.result_notes,
+      resultSubgrades: submissionCard.resultSubgrades,
+      gradedAt: submissionCard.graded_at,
+      imageUrl: submissionCard.imageUrl,
     });
   }
 
@@ -1193,14 +1359,25 @@ export default function GradingCenterPage() {
               {filteredSubmissions.map((submission) => {
                 const isExpanded = expandedSubmissionIds.has(submission.id);
                 const statusTone = getSubmissionStatusTone(submission.status);
-                const forecastRoi =
-                  submission.expectedNetUpside !== null &&
-                  submission.rawValueTotal + submission.totalGradingCost > 0
-                    ? (submission.expectedNetUpside /
-                        (submission.rawValueTotal +
-                          submission.totalGradingCost)) *
-                      100
+                const performanceValue =
+                  submission.realizedGradingUplift ??
+                  submission.expectedNetUpside;
+                const performanceBasis =
+                  submission.rawValueTotal +
+                  submission.totalGradingCost;
+                const performanceRoi =
+                  performanceValue !== null && performanceBasis > 0
+                    ? (performanceValue / performanceBasis) * 100
                     : null;
+                const hasCompleteResults =
+                  submission.realizedGradingUplift !== null;
+                const displayedGradedValue = hasCompleteResults
+                  ? submission.resultMarketValueTotal
+                  : submission.expectedGradedValueTotal > 0
+                    ? submission.expectedGradedValueTotal
+                    : null;
+                const nextTransitionLabel =
+                  getNextTransitionLabel(submission.status);
 
                 return (
                   <article className="submission-card" key={submission.id}>
@@ -1239,6 +1416,17 @@ export default function GradingCenterPage() {
                       </div>
 
                       <div className="submission-actions">
+                        {nextTransitionLabel && (
+                          <button
+                            className="workflow-action-button"
+                            type="button"
+                            onClick={() => openTransitionModal(submission)}
+                          >
+                            <span>→</span>
+                            {nextTransitionLabel}
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => toggleSubmission(submission.id)}
@@ -1281,35 +1469,44 @@ export default function GradingCenterPage() {
                       </div>
 
                       <div>
-                        <span>Expected graded value</span>
+                        <span>
+                          {hasCompleteResults
+                            ? "Recorded result value"
+                            : "Expected graded value"}
+                        </span>
                         <strong>
-                          {submission.expectedGradedValueTotal > 0
-                            ? formatCurrency(
-                                submission.expectedGradedValueTotal,
-                                submission.currency
-                              )
-                            : "—"}
+                          {formatCurrency(
+                            displayedGradedValue,
+                            submission.currency
+                          )}
                         </strong>
                       </div>
 
                       <div>
-                        <span>Expected net upside</span>
+                        <span>
+                          {hasCompleteResults
+                            ? "Realized grading uplift"
+                            : "Expected net upside"}
+                        </span>
                         <strong
                           className={
-                            submission.expectedNetUpside !== null &&
-                            submission.expectedNetUpside >= 0
+                            performanceValue !== null && performanceValue >= 0
                               ? "value-positive"
-                              : submission.expectedNetUpside !== null
+                              : performanceValue !== null
                                 ? "value-negative"
                                 : ""
                           }
                         >
                           {formatCurrency(
-                            submission.expectedNetUpside,
+                            performanceValue,
                             submission.currency
                           )}
                         </strong>
-                        <small>{formatPercentage(forecastRoi)} forecast ROI</small>
+                        <small>
+                          {formatPercentage(performanceRoi)} {hasCompleteResults
+                            ? "realized"
+                            : "forecast"} ROI
+                        </small>
                       </div>
                     </div>
 
@@ -1449,15 +1646,38 @@ export default function GradingCenterPage() {
                                   </div>
                                 </div>
 
-                                {card && (
-                                  <Link
-                                    className="open-card-link"
-                                    href={`/cards/${card.id}`}
-                                  >
-                                    Open card
-                                    <span>→</span>
-                                  </Link>
-                                )}
+                                <div className="card-row-actions">
+                                  {card &&
+                                    canRecordGradingResult(
+                                      submission.status,
+                                      submissionCard.status
+                                    ) && (
+                                      <button
+                                        className="record-result-button"
+                                        type="button"
+                                        onClick={() =>
+                                          openResultModal(
+                                            submission,
+                                            submissionCard
+                                          )
+                                        }
+                                      >
+                                        {submissionCard.result_grade
+                                          ? "Edit result"
+                                          : "Record result"}
+                                      </button>
+                                    )}
+
+                                  {card && (
+                                    <Link
+                                      className="open-card-link"
+                                      href={`/cards/${card.id}`}
+                                    >
+                                      Open card
+                                      <span>→</span>
+                                    </Link>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
@@ -1480,6 +1700,24 @@ export default function GradingCenterPage() {
         }}
       />
 
+      <TransitionGradingSubmissionModal
+        isOpen={Boolean(transitionSubmission)}
+        submission={transitionSubmission}
+        onClose={() => setTransitionSubmission(null)}
+        onTransitioned={(result) => {
+          void handleTransitioned(result);
+        }}
+      />
+
+      <RecordGradingResultModal
+        isOpen={Boolean(resultCard)}
+        card={resultCard}
+        onClose={() => setResultCard(null)}
+        onRecorded={(result) => {
+          void handleResultRecorded(result);
+        }}
+      />
+
       <style jsx>{`
         :global(*) {
           box-sizing: border-box;
@@ -1495,9 +1733,11 @@ export default function GradingCenterPage() {
         }
 
         .app-shell {
+          width: 100%;
+          max-width: 100%;
           min-height: 100vh;
           display: grid;
-          grid-template-columns: 310px minmax(0, 1fr);
+          grid-template-columns: clamp(220px, 18vw, 300px) minmax(0, 1fr);
           background:
             radial-gradient(
               circle at 84% 0%,
@@ -1509,6 +1749,7 @@ export default function GradingCenterPage() {
         }
 
         .sidebar {
+          min-width: 0;
           position: sticky;
           top: 0;
           height: 100vh;
@@ -1708,13 +1949,20 @@ export default function GradingCenterPage() {
         }
 
         .main-content {
+          width: 100%;
+          max-width: 100%;
           min-width: 0;
-          padding: 52px 56px 70px;
+          padding:
+            clamp(28px, 3vw, 52px)
+            clamp(18px, 3vw, 56px)
+            70px;
         }
 
         .page-header {
+          width: 100%;
           max-width: 1500px;
           display: flex;
+          flex-wrap: wrap;
           align-items: flex-end;
           justify-content: space-between;
           gap: 28px;
@@ -1747,8 +1995,9 @@ export default function GradingCenterPage() {
         }
 
         .page-actions {
-          flex: 0 0 auto;
+          flex: 0 1 auto;
           display: flex;
+          flex-wrap: wrap;
           gap: 10px;
         }
 
@@ -1801,9 +2050,13 @@ export default function GradingCenterPage() {
         }
 
         .metrics-grid {
+          width: 100%;
           max-width: 1500px;
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 210px), 1fr)
+          );
           gap: 14px;
           margin: 0 auto;
         }
@@ -1875,7 +2128,9 @@ export default function GradingCenterPage() {
 
         .workflow-panel,
         .grading-panel {
+          width: 100%;
           max-width: 1500px;
+          min-width: 0;
           margin: 22px auto 0;
           padding: 24px;
           border: 1px solid rgba(148, 163, 184, 0.12);
@@ -1908,7 +2163,10 @@ export default function GradingCenterPage() {
 
         .workflow-steps {
           display: grid;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 150px), 1fr)
+          );
           gap: 9px;
           margin-top: 20px;
         }
@@ -1969,7 +2227,10 @@ export default function GradingCenterPage() {
 
         .filter-grid {
           display: grid;
-          grid-template-columns: minmax(250px, 1fr) 220px 220px;
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 190px), 1fr)
+          );
           gap: 11px;
           padding: 19px 0;
         }
@@ -2072,6 +2333,8 @@ export default function GradingCenterPage() {
         }
 
         .submission-card {
+          min-width: 0;
+          max-width: 100%;
           overflow: hidden;
           border: 1px solid rgba(148, 163, 184, 0.12);
           border-radius: 19px;
@@ -2079,9 +2342,10 @@ export default function GradingCenterPage() {
         }
 
         .submission-summary {
+          min-width: 0;
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr) auto;
-          align-items: center;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: start;
           gap: 16px;
           padding: 18px;
         }
@@ -2102,6 +2366,8 @@ export default function GradingCenterPage() {
 
         .submission-identity {
           min-width: 0;
+          max-width: 100%;
+          overflow-wrap: anywhere;
         }
 
         .submission-title-row {
@@ -2190,7 +2456,20 @@ export default function GradingCenterPage() {
           font-weight: 700;
         }
 
+        .submission-actions {
+          grid-column: 1 / -1;
+          width: 100%;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          flex-wrap: wrap;
+          gap: 8px;
+          padding-left: 68px;
+        }
+
         .submission-actions button {
+          max-width: 100%;
           min-height: 38px;
           display: inline-flex;
           align-items: center;
@@ -2202,6 +2481,7 @@ export default function GradingCenterPage() {
           color: #a1a8b6;
           font-size: 10px;
           font-weight: 750;
+          white-space: normal;
           cursor: pointer;
         }
 
@@ -2210,9 +2490,24 @@ export default function GradingCenterPage() {
           color: #ffffff;
         }
 
+        .submission-actions .workflow-action-button {
+          border-color: rgba(167, 139, 250, 0.28);
+          background: rgba(124, 92, 255, 0.1);
+          color: #d8d1ff;
+        }
+
+        .submission-actions .workflow-action-button:hover {
+          border-color: rgba(167, 139, 250, 0.52);
+          background: rgba(124, 92, 255, 0.16);
+        }
+
         .submission-metrics {
+          min-width: 0;
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 145px), 1fr)
+          );
           gap: 1px;
           border-top: 1px solid rgba(148, 163, 184, 0.09);
           border-bottom: 1px solid rgba(148, 163, 184, 0.09);
@@ -2292,9 +2587,10 @@ export default function GradingCenterPage() {
 
         .submission-card-row {
           min-width: 0;
+          max-width: 100%;
           display: grid;
-          grid-template-columns: auto auto minmax(180px, 1fr) minmax(420px, 1.8fr) auto;
-          align-items: center;
+          grid-template-columns: auto auto minmax(0, 1fr);
+          align-items: start;
           gap: 12px;
           padding: 12px;
           border: 1px solid rgba(148, 163, 184, 0.1);
@@ -2339,6 +2635,8 @@ export default function GradingCenterPage() {
 
         .card-copy {
           min-width: 0;
+          max-width: 100%;
+          overflow-wrap: anywhere;
         }
 
         .card-title-line {
@@ -2375,9 +2673,14 @@ export default function GradingCenterPage() {
         }
 
         .card-economics {
+          grid-column: 1 / -1;
           min-width: 0;
+          width: 100%;
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 125px), 1fr)
+          );
           gap: 8px;
         }
 
@@ -2386,6 +2689,41 @@ export default function GradingCenterPage() {
           padding: 9px 10px;
           border-radius: 10px;
           background: rgba(0, 0, 0, 0.14);
+        }
+
+        .card-row-actions {
+          grid-column: 1 / -1;
+          width: 100%;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .record-result-button {
+          max-width: 100%;
+          min-height: 36px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 11px;
+          border: 1px solid rgba(52, 211, 153, 0.22);
+          border-radius: 9px;
+          background: rgba(16, 185, 129, 0.07);
+          color: #a7f3d0;
+          font: inherit;
+          font-size: 9px;
+          font-weight: 800;
+          white-space: nowrap;
+          cursor: pointer;
+        }
+
+        .record-result-button:hover {
+          border-color: rgba(52, 211, 153, 0.48);
+          background: rgba(16, 185, 129, 0.12);
+          color: #d1fae5;
         }
 
         .open-card-link {
@@ -2410,24 +2748,17 @@ export default function GradingCenterPage() {
         }
 
         @media (max-width: 1260px) {
-          .metrics-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+          .page-header {
+            align-items: flex-start;
+            flex-direction: column;
           }
 
-          .workflow-steps {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+          .page-actions {
+            width: 100%;
           }
 
-          .submission-metrics {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-
-          .submission-card-row {
-            grid-template-columns: auto auto minmax(0, 1fr) auto;
-          }
-
-          .card-economics {
-            grid-column: 3 / -1;
+          .page-actions > * {
+            flex: 1 1 180px;
           }
         }
 
@@ -2511,11 +2842,10 @@ export default function GradingCenterPage() {
           }
 
           .filter-grid {
-            grid-template-columns: 1fr 1fr;
-          }
-
-          .search-field {
-            grid-column: 1 / -1;
+            grid-template-columns: repeat(
+              auto-fit,
+              minmax(min(100%, 180px), 1fr)
+            );
           }
         }
 
@@ -2553,6 +2883,7 @@ export default function GradingCenterPage() {
 
           .submission-actions {
             grid-column: 1 / -1;
+            padding-left: 0;
           }
 
           .submission-actions button {
@@ -2570,8 +2901,13 @@ export default function GradingCenterPage() {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
-          .open-card-link {
+          .card-row-actions {
             grid-column: 1 / -1;
+            width: 100%;
+            justify-content: flex-start;
+          }
+
+          .open-card-link {
             justify-content: flex-end;
           }
         }
