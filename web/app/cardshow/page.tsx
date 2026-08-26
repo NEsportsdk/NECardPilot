@@ -9,7 +9,9 @@ import {
 } from "react";
 
 import CreateCardshowEventModal from "@/components/cardshow/CreateCardshowEventModal";
+import CardshowInventoryManager from "@/components/cardshow/CardshowInventoryManager";
 import type { CreateCardshowEventResult } from "@/lib/cardshow/createCardshowEvent";
+import type { UpsertCardshowInventoryResult } from "@/lib/cardshow/upsertCardshowInventory";
 import { createClient } from "@/lib/supabase/client";
 
 type NumericDatabaseValue = number | string | null;
@@ -228,6 +230,7 @@ export default function CardshowCenterPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [inventoryEvent, setInventoryEvent] = useState<EventSummary | null>(null);
   const [expandedEventIds, setExpandedEventIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -392,6 +395,19 @@ export default function CardshowCenterPage() {
 
   async function handleCreated(result: CreateCardshowEventResult) {
     setShowCreateEvent(false);
+    await loadCardshowCenter();
+    setMessage(result.message);
+    setExpandedEventIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      nextIds.add(result.eventId);
+      return nextIds;
+    });
+  }
+
+  async function handleInventorySaved(
+    result: UpsertCardshowInventoryResult
+  ) {
+    setInventoryEvent(null);
     await loadCardshowCenter();
     setMessage(result.message);
     setExpandedEventIds((currentIds) => {
@@ -636,15 +652,15 @@ export default function CardshowCenterPage() {
             <p className="eyebrow">Two-week sprint</p>
             <h2>Cardshow readiness</h2>
             <p>
-              Event setup is live. Inventory preparation, purchase-lot allocation
-              and multi-card checkout are the next operational layers.
+              Event setup and inventory management are live. Purchase-lot
+              allocation, rapid intake and multi-card checkout are next.
             </p>
           </div>
 
           <div className="readiness-steps">
             <ReadinessStep number="1" title="Event" status="Ready" active />
-            <ReadinessStep number="2" title="Inventory" status="Next" />
-            <ReadinessStep number="3" title="Rapid intake" status="Planned" />
+            <ReadinessStep number="2" title="Inventory" status="Live" active />
+            <ReadinessStep number="3" title="Rapid intake" status="Next" />
             <ReadinessStep number="4" title="Checkout" status="Planned" />
             <ReadinessStep number="5" title="Deploy" status="Planned" />
           </div>
@@ -656,8 +672,8 @@ export default function CardshowCenterPage() {
               <p className="eyebrow">Event operations</p>
               <h2>Cardshows</h2>
               <p>
-                Create events now. Inventory, pricing and checkout actions will
-                attach to these event records.
+                Create events, add cards in bulk, assign show prices and keep
+                every physical box or showcase location searchable.
               </p>
             </div>
             <span className="result-count">
@@ -770,6 +786,17 @@ export default function CardshowCenterPage() {
                       </div>
 
                       <div className="event-actions">
+                        {["planning", "active"].includes(event.status) && (
+                          <button
+                            className="manage-inventory-button"
+                            type="button"
+                            onClick={() => setInventoryEvent(event)}
+                          >
+                            Manage inventory
+                            <span>▱</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => toggleEvent(event.id)}
@@ -848,15 +875,19 @@ export default function CardshowCenterPage() {
 
                         <div className="next-actions">
                           <div>
-                            <strong>Inventory management is next</strong>
+                            <strong>Inventory manager is live</strong>
                             <p>
-                              The next sprint adds bulk card selection, asking and
-                              floor prices, price groups and physical locations.
+                              Select up to 5,000 cards, apply asking and floor
+                              prices, use price groups and assign physical locations.
                             </p>
                           </div>
-                          <button type="button" disabled>
+                          <button
+                            type="button"
+                            onClick={() => setInventoryEvent(event)}
+                            disabled={!["planning", "active"].includes(event.status)}
+                          >
                             Manage inventory
-                            <span>Next</span>
+                            <span>Open</span>
                           </button>
                         </div>
                       </div>
@@ -921,6 +952,20 @@ export default function CardshowCenterPage() {
           void handleCreated(result);
         }}
       />
+
+      {inventoryEvent && (
+        <CardshowInventoryManager
+          isOpen
+          eventId={inventoryEvent.id}
+          eventName={inventoryEvent.name}
+          eventCurrency={inventoryEvent.currency}
+          eventStatus={inventoryEvent.status}
+          onClose={() => setInventoryEvent(null)}
+          onSaved={(result) => {
+            void handleInventorySaved(result);
+          }}
+        />
+      )}
 
       <style jsx>{`
         :global(*) {
@@ -1511,6 +1556,14 @@ export default function CardshowCenterPage() {
           font-weight: 700;
         }
 
+        .event-actions {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 7px;
+        }
+
         .event-actions button {
           min-height: 38px;
           display: inline-flex;
@@ -1524,6 +1577,12 @@ export default function CardshowCenterPage() {
           font-size: 9px;
           font-weight: 750;
           cursor: pointer;
+        }
+
+        .event-actions .manage-inventory-button {
+          border-color: rgba(167, 139, 250, 0.25);
+          background: rgba(124, 92, 255, 0.08);
+          color: #d8d1ff;
         }
 
         .event-metrics {
@@ -1590,8 +1649,16 @@ export default function CardshowCenterPage() {
           border: 1px solid rgba(167, 139, 250, 0.18);
           border-radius: 10px;
           background: rgba(124, 92, 255, 0.06);
-          color: #968fac;
+          color: #c9c1ff;
           font-size: 9px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .next-actions button:hover:not(:disabled) {
+          border-color: rgba(167, 139, 250, 0.38);
+          background: rgba(124, 92, 255, 0.11);
+          color: #ffffff;
         }
 
         .next-actions button span {
