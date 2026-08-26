@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -223,6 +224,7 @@ function normalizeSearch(value: string) {
 }
 
 export default function CardshowCenterPage() {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -248,7 +250,7 @@ export default function CardshowCenterPage() {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      window.location.href = "/login";
+      router.replace("/login");
       return;
     }
 
@@ -387,7 +389,7 @@ export default function CardshowCenterPage() {
     }
 
     setLoading(false);
-  }, [supabase]);
+  }, [router, supabase]);
 
   useEffect(() => {
     void loadCardshowCenter();
@@ -419,7 +421,7 @@ export default function CardshowCenterPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.replace("/login");
   }
 
   function toggleEvent(eventId: string) {

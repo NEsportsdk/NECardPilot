@@ -149,10 +149,6 @@ class RequestError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function getRequiredString(value: unknown, label: string) {
   if (typeof value !== "string" || !value.trim()) {
     throw new RequestError(`${label} mangler.`);

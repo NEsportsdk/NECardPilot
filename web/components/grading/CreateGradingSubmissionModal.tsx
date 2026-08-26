@@ -300,12 +300,6 @@ function createCardDraft(card: AvailableCard): SelectedCardDraft {
   };
 }
 
-function getCollectionTypeLabel(type: CollectionType) {
-  return type === "pc"
-    ? "Personal Collection"
-    : "Dealer Inventory";
-}
-
 function getValuationLabel(source: ValuationSource) {
   switch (source) {
     case "market":

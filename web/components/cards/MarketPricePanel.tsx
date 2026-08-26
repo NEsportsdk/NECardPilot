@@ -353,8 +353,10 @@ export default function MarketPricePanel({
   const hasMarketEstimate =
     marketEstimate !== null;
 
-  const comparables =
-    result?.comparables ?? [];
+  const comparables = useMemo(
+    () => result?.comparables ?? [],
+    [result?.comparables]
+  );
 
   const includedComparables =
     useMemo(
