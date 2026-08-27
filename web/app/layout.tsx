@@ -1,7 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Suspense } from "react";
+
+import MobileNavigation from "@/components/app/MobileNavigation";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,6 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://vallective.com"),
+  applicationName: "Vallective",
   title: {
     default: "Vallective",
     template: "%s | Vallective",
@@ -30,6 +35,20 @@ export const metadata: Metadata = {
     locale: "da_DK",
     type: "website",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Vallective",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#07090d",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -44,6 +63,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
+        <Suspense fallback={null}>
+          <MobileNavigation />
+        </Suspense>
         <Analytics />
         <SpeedInsights />
       </body>

@@ -1,0 +1,105 @@
+export type MobileNavigationIcon =
+  | "analytics"
+  | "cards"
+  | "cardshow"
+  | "collections"
+  | "grading"
+  | "home"
+  | "more"
+  | "scanner"
+  | "settings"
+  | "transactions";
+
+export type MobileNavigationItem = {
+  href: string;
+  icon: MobileNavigationIcon;
+  label: string;
+  matches: (pathname: string) => boolean;
+};
+
+export const mobilePrimaryNavigation: MobileNavigationItem[] = [
+  {
+    href: "/",
+    icon: "home",
+    label: "Home",
+    matches: (pathname) => pathname === "/",
+  },
+  {
+    href: "/cards",
+    icon: "cards",
+    label: "Cards",
+    matches: (pathname) => pathname.startsWith("/cards"),
+  },
+  {
+    href: "/scanner",
+    icon: "scanner",
+    label: "Scan",
+    matches: (pathname) => pathname.startsWith("/scanner"),
+  },
+  {
+    href: "/#collections",
+    icon: "collections",
+    label: "Collections",
+    matches: (pathname) => pathname.startsWith("/collections"),
+  },
+];
+
+export const mobileMoreNavigation: MobileNavigationItem[] = [
+  {
+    href: "/grading",
+    icon: "grading",
+    label: "Grading",
+    matches: (pathname) => pathname.startsWith("/grading"),
+  },
+  {
+    href: "/cardshow",
+    icon: "cardshow",
+    label: "Cardshow",
+    matches: (pathname) => pathname.startsWith("/cardshow"),
+  },
+  {
+    href: "/transactions",
+    icon: "transactions",
+    label: "Transactions",
+    matches: (pathname) => pathname.startsWith("/transactions"),
+  },
+  {
+    href: "/analytics",
+    icon: "analytics",
+    label: "Analytics",
+    matches: (pathname) => pathname.startsWith("/analytics"),
+  },
+  {
+    href: "/settings",
+    icon: "settings",
+    label: "Settings",
+    matches: (pathname) =>
+      pathname.startsWith("/settings") ||
+      pathname.startsWith("/change-password"),
+  },
+];
+
+const mobileNavigationExcludedRoutes = [
+  "/auth",
+  "/change-password",
+  "/forgot-password",
+  "/login",
+  "/signup",
+];
+
+export function isMobileNavigationItemActive(
+  pathname: string,
+  item: MobileNavigationItem
+) {
+  return item.matches(pathname);
+}
+
+export function isMobileMoreNavigationActive(pathname: string) {
+  return mobileMoreNavigation.some((item) => item.matches(pathname));
+}
+
+export function shouldShowMobileNavigation(pathname: string) {
+  return !mobileNavigationExcludedRoutes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+}

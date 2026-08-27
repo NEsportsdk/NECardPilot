@@ -100,6 +100,10 @@ describe("auth route classification", () => {
     expect(isPublicRoute("/auth/confirm")).toBe(true);
   });
 
+  it("keeps installable app metadata public", () => {
+    expect(isPublicRoute("/manifest.webmanifest")).toBe(true);
+  });
+
   it("keeps app routes protected", () => {
     expect(isPublicRoute("/cards")).toBe(false);
   });

@@ -464,9 +464,16 @@ export default function AppSidebar({
         }
 
         @media (max-width: 620px) {
+          .app-sidebar-rail {
+            display: none;
+          }
+
+          .app-sidebar-grid .navigation,
+          .app-sidebar-fixed .navigation,
           .app-sidebar-grid-cards .navigation,
+          .app-sidebar-grid-scanner .navigation,
           .app-sidebar-grid-transactions .navigation {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            display: none;
           }
         }
 

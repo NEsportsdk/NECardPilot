@@ -892,7 +892,7 @@ button:disabled {
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 620px) {
   :root {
     --sidebar-width: 0px;
   }
