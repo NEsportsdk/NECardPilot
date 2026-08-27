@@ -1,6 +1,8 @@
 -- Baseline captured read-only from Supabase project yglecdgndfctltmuekju.
 -- Generated for local version control only; do not apply to the existing live project.
 
+begin;
+
 set check_function_bodies = off;
 
 create table public.card_attributes (
@@ -939,7 +941,7 @@ begin
     v_estimate.confidence_score;
 
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.create_cardshow_event(p_name text, p_venue text DEFAULT NULL::text, p_city text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_starts_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_ends_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_currency text DEFAULT 'DKK'::text, p_payment_methods text[] DEFAULT ARRAY['cash'::text, 'mobilepay'::text, 'card'::text, 'other'::text], p_booth_fee numeric DEFAULT 0, p_travel_cost numeric DEFAULT 0, p_accommodation_cost numeric DEFAULT 0, p_food_cost numeric DEFAULT 0, p_other_event_costs numeric DEFAULT 0, p_notes text DEFAULT NULL::text)
@@ -1222,7 +1224,7 @@ begin
     )::text;
 
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.create_grading_submission(p_name text, p_grading_company text, p_service_level text DEFAULT NULL::text, p_currency text DEFAULT 'DKK'::text, p_submission_number text DEFAULT NULL::text, p_estimated_turnaround_days integer DEFAULT NULL::integer, p_submission_fee numeric DEFAULT 0, p_outbound_shipping_cost numeric DEFAULT 0, p_return_shipping_cost numeric DEFAULT 0, p_insurance_cost numeric DEFAULT 0, p_other_shared_costs numeric DEFAULT 0, p_notes text DEFAULT NULL::text, p_cards jsonb DEFAULT '[]'::jsonb)
@@ -2052,7 +2054,7 @@ begin
     )::text;
 
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.create_purchase_lot(p_name text, p_allocation_method text DEFAULT 'proportional'::text, p_source text DEFAULT NULL::text, p_seller text DEFAULT NULL::text, p_purchase_reference text DEFAULT NULL::text, p_purchased_at timestamp with time zone DEFAULT now(), p_currency text DEFAULT 'DKK'::text, p_purchase_amount numeric DEFAULT 0, p_buyer_fee numeric DEFAULT 0, p_shipping_cost numeric DEFAULT 0, p_taxes numeric DEFAULT 0, p_other_costs numeric DEFAULT 0, p_notes text DEFAULT NULL::text, p_cards jsonb DEFAULT '[]'::jsonb, p_lock boolean DEFAULT true, p_overwrite_existing_purchase_price boolean DEFAULT false)
@@ -3046,7 +3048,7 @@ begin
     )::text;
 
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.lock_purchase_lot(p_lot_id uuid, p_overwrite_existing_purchase_price boolean DEFAULT false)
@@ -3257,7 +3259,7 @@ begin
     )::text;
 
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.record_card_collection_movement()
@@ -3304,7 +3306,7 @@ begin
 
   return new;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.record_card_sale(p_card_id uuid, p_sale_price numeric, p_shipping_income numeric DEFAULT 0, p_platform_fee numeric DEFAULT 0, p_payment_fee numeric DEFAULT 0, p_shipping_cost numeric DEFAULT 0, p_other_costs numeric DEFAULT 0, p_platform text DEFAULT NULL::text, p_buyer text DEFAULT NULL::text, p_reference text DEFAULT NULL::text, p_notes text DEFAULT NULL::text, p_sold_at timestamp with time zone DEFAULT now())
@@ -3548,7 +3550,7 @@ begin
     )::text;
 
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.record_grading_card_result(p_submission_card_id uuid, p_result_grade text, p_certification_number text DEFAULT NULL::text, p_result_qualifier text DEFAULT NULL::text, p_result_subgrades jsonb DEFAULT '{}'::jsonb, p_result_market_value numeric DEFAULT NULL::numeric, p_result_notes text DEFAULT NULL::text, p_graded_at timestamp with time zone DEFAULT now())
@@ -3861,7 +3863,7 @@ begin
     )::text;
 
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.set_card_market_estimates_updated_at()
@@ -3873,7 +3875,7 @@ begin
 
   return new;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.set_card_transactions_updated_at()
@@ -3885,7 +3887,7 @@ begin
 
   return new;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.set_cards_updated_at()
@@ -3896,7 +3898,7 @@ begin
   new.updated_at = now();
   return new;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.set_cardshow_updated_at()
@@ -3908,7 +3910,7 @@ begin
 
   return new;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.set_grading_updated_at()
@@ -3920,7 +3922,7 @@ begin
 
   return new;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.transition_grading_submission(p_submission_id uuid, p_target_status text, p_occurred_at timestamp with time zone DEFAULT now(), p_submission_number text DEFAULT NULL::text, p_outbound_tracking_number text DEFAULT NULL::text, p_return_tracking_number text DEFAULT NULL::text, p_notes text DEFAULT NULL::text)
@@ -5038,7 +5040,7 @@ begin
     )::text;
 
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.upsert_cardshow_inventory_items(p_event_id uuid, p_items jsonb DEFAULT '[]'::jsonb)
@@ -5733,10 +5735,7 @@ begin
       end,
       v_notes
     )
-    on conflict (
-      event_id,
-      card_id
-    )
+    on conflict on constraint cardshow_inventory_items_event_id_card_id_key
     do update
     set
       status =
@@ -5828,7 +5827,7 @@ begin
     )::text;
 
 end;
-$function$
+$function$;
 
 
 -- Triggers, storage configuration, and row-level security policies
@@ -6027,3 +6026,5 @@ with check (((bucket_id = 'card-images'::text) AND ((storage.foldername(name))[1
 
 create policy "Users can view their own card images" on storage.objects as permissive for select to authenticated
 using (((bucket_id = 'card-images'::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))));
+
+commit;

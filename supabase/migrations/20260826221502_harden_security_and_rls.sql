@@ -250,6 +250,46 @@ drop policy if exists "Users can view own purchase lots" on public.purchase_lots
 create policy "Users can view own purchase lots" on public.purchase_lots as permissive for select to authenticated
 using (((select auth.uid()) = user_id));
 
+-- Branch environments do not copy Storage buckets or object policies from the
+-- production project. Keep the private card-images contract reproducible.
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'card-images',
+  'card-images',
+  false,
+  15728640,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+)
+on conflict (id) do update
+set
+  name = excluded.name,
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Users can delete their own card images" on storage.objects;
+create policy "Users can delete their own card images" on storage.objects as permissive for delete to authenticated
+using (((bucket_id = 'card-images'::text) AND ((storage.foldername(name))[1] = (select (auth.uid())::text))));
+
+drop policy if exists "Users can update their own card images" on storage.objects;
+create policy "Users can update their own card images" on storage.objects as permissive for update to authenticated
+using (((bucket_id = 'card-images'::text) AND ((storage.foldername(name))[1] = (select (auth.uid())::text))))
+with check (((bucket_id = 'card-images'::text) AND ((storage.foldername(name))[1] = (select (auth.uid())::text))));
+
+drop policy if exists "Users can upload their own card images" on storage.objects;
+create policy "Users can upload their own card images" on storage.objects as permissive for insert to authenticated
+with check (((bucket_id = 'card-images'::text) AND ((storage.foldername(name))[1] = (select (auth.uid())::text))));
+
+drop policy if exists "Users can view their own card images" on storage.objects;
+create policy "Users can view their own card images" on storage.objects as permissive for select to authenticated
+using (((bucket_id = 'card-images'::text) AND ((storage.foldername(name))[1] = (select (auth.uid())::text))));
+
 -- Cover foreign-key columns reported by the performance advisor.
 create index if not exists idx_card_collection_history_card_id on public.card_collection_history (card_id);
 create index if not exists idx_card_collection_history_from_collection_id on public.card_collection_history (from_collection_id);
