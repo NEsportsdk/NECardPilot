@@ -54,8 +54,13 @@ appens error boundaries viser en sikker fejlreference til brugeren.
 
 ## Deployment
 
-Ved opsætning på Vercel skal Root Directory være `web`. De tre variabler fra
+Ved opsætning på Vercel skal Root Directory være `web`. De fire variabler fra
 `web/.env.example` skal oprettes i Vercel uden at committe deres værdier.
+
+`NEXT_PUBLIC_SITE_URL` skal være appens primære HTTPS-adresse i production.
+Supabase Auth skal samtidig tillade `http://localhost:3000/**`, production-
+adressen og Vercels preview-domæner som redirect URLs, så konto-, bekræftelses-
+og nulstillingsmails kan vende sikkert tilbage til appen.
 
 Supabase-skemaændringer ligger under `supabase/migrations` og skal gennemgås og
 godkendes særskilt, før de anvendes på et live-projekt.

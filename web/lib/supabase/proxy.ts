@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getSafeNextPath } from "@/lib/auth/redirects";
+import { isGuestOnlyRoute, isPublicRoute } from "@/lib/auth/routes";
+
 function copyResponseCookies(
   source: NextResponse,
   destination: NextResponse
@@ -51,22 +54,32 @@ export async function updateSession(request: NextRequest) {
   const { data, error } = await supabase.auth.getClaims();
 
   const isAuthenticated = Boolean(data?.claims?.sub) && !error;
-  const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+  const pathname = request.nextUrl.pathname;
 
-  if (!isAuthenticated && !isLoginPage) {
+  if (!isAuthenticated && !isPublicRoute(pathname)) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.search = "";
+    loginUrl.searchParams.set(
+      "next",
+      `${pathname}${request.nextUrl.search}`
+    );
 
     const redirectResponse = NextResponse.redirect(loginUrl);
 
     return copyResponseCookies(response, redirectResponse);
   }
 
-  if (isAuthenticated && isLoginPage) {
+  if (isAuthenticated && isGuestOnlyRoute(pathname)) {
     const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
+    const nextPath = getSafeNextPath(
+      request.nextUrl.searchParams.get("next")
+    );
+    const targetUrl = new URL(nextPath, homeUrl.origin);
+    homeUrl.pathname = targetUrl.pathname;
     homeUrl.search = "";
+    homeUrl.search = targetUrl.search;
+    homeUrl.hash = targetUrl.hash;
 
     const redirectResponse = NextResponse.redirect(homeUrl);
 

@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { validatePassword } from "@/lib/auth/forms";
 import { createClient } from "@/lib/supabase/client";
 
 type MessageTone = "info" | "success" | "error";
@@ -110,10 +111,12 @@ export default function ChangePasswordPage() {
     event.preventDefault();
     setMessage(null);
 
-    if (password.length < 12) {
+    const passwordResult = validatePassword(password);
+
+    if (!passwordResult.ok) {
       setMessage({
         tone: "error",
-        text: "Vælg en adgangskode på mindst 12 tegn.",
+        text: passwordResult.message,
       });
       return;
     }
@@ -167,7 +170,7 @@ export default function ChangePasswordPage() {
       setShowNonceField(false);
       setMessage({
         tone: "success",
-        text: "Adgangskoden er ændret. Brug den nye adgangskode på din iPhone. Hvis computeren logger ud, logger du blot ind igen med den nye kode.",
+        text: "Adgangskoden er ændret. Du kan nu bruge den på alle dine enheder.",
       });
     } catch (error) {
       setMessage({
@@ -199,8 +202,8 @@ export default function ChangePasswordPage() {
           <span className="eyebrow">ACCOUNT SECURITY</span>
           <h1>Vælg en ny adgangskode</h1>
           <p>
-            Du er allerede logget ind på computeren. Derfor kan NECardPilot
-            ændre adgangskoden sikkert fra din aktive Supabase-session.
+            Vælg en stærk adgangskode. Hvis du kom fra et nulstillingslink,
+            har Supabase allerede oprettet en sikker, midlertidig session.
           </p>
         </header>
 
@@ -239,8 +242,8 @@ export default function ChangePasswordPage() {
               <div>
                 <strong>Ekstra sikkerhedskontrol</strong>
                 <p>
-                  Supabase kan kræve en emailkode, fordi din nuværende session
-                  er mere end 24 timer gammel.
+                  Der kan kræves en emailkode, hvis din nuværende session er
+                  for gammel til en direkte adgangskodeændring.
                 </p>
               </div>
 
