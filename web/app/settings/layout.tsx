@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Settings",
-  description: "Administrér din Vallective-profil og kontosikkerhed.",
+  description: "Manage your Vallective profile, app and account security.",
 };
 
 export default function SettingsLayout({

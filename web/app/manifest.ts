@@ -16,10 +16,22 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["sports", "finance", "utilities"],
     icons: [
       {
-        src: "/favicon.ico",
-        sizes: "256x256",
-        type: "image/x-icon",
+        src: "/icons/vallective-192.png",
+        sizes: "192x192",
+        type: "image/png",
         purpose: "any",
+      },
+      {
+        src: "/icons/vallective-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/vallective-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
       },
     ],
     shortcuts: [
@@ -30,9 +42,9 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/scanner",
         icons: [
           {
-            src: "/favicon.ico",
-            sizes: "256x256",
-            type: "image/x-icon",
+            src: "/icons/vallective-192.png",
+            sizes: "192x192",
+            type: "image/png",
           },
         ],
       },
@@ -43,9 +55,9 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/cards",
         icons: [
           {
-            src: "/favicon.ico",
-            sizes: "256x256",
-            type: "image/x-icon",
+            src: "/icons/vallective-192.png",
+            sizes: "192x192",
+            type: "image/png",
           },
         ],
       },

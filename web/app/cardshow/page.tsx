@@ -13,6 +13,7 @@ import {
 import AppSidebar from "@/components/app/AppSidebar";
 import CreateCardshowEventModal from "@/components/cardshow/CreateCardshowEventModal";
 import CardshowInventoryManager from "@/components/cardshow/CardshowInventoryManager";
+import AppStatePanel from "@/components/system/AppStatePanel";
 import type { CreateCardshowEventResult } from "@/lib/cardshow/createCardshowEvent";
 import type { CreatePurchaseLotResult } from "@/lib/cardshow/createPurchaseLot";
 import { lockPurchaseLot } from "@/lib/cardshow/lockPurchaseLot";
@@ -883,26 +884,30 @@ export default function CardshowCenterPage() {
           </div>
 
           {loading ? (
-            <div className="loading-state">
-              <span className="loading-spinner" />
-              <p>Loading cardshow operations...</p>
-            </div>
+            <AppStatePanel
+              description="Preparing events, inventory, purchase lots and financial details."
+              headingLevel="h3"
+              loading
+              title="Loading cardshow operations"
+            />
           ) : filteredEvents.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">▦</div>
-              <h3>
-                {events.length === 0
+            <AppStatePanel
+              description={
+                events.length === 0
+                  ? "Start with the event details, then attach inventory and manage seller checkout."
+                  : "Adjust the search or status filter to show more events."
+              }
+              headingLevel="h3"
+              icon="▦"
+              title={
+                events.length === 0
                   ? "Create your first cardshow"
-                  : "No events match the filters"}
-              </h3>
-              <p>
-                {events.length === 0
-                  ? "Start with the event details. Inventory and seller checkout will be attached next."
-                  : "Adjust the search or status filter to show more events."}
-              </p>
+                  : "No events match the filters"
+              }
+            >
               {events.length === 0 && (
                 <button
-                  className="primary-button"
+                  className="app-state-action app-state-action-primary"
                   type="button"
                   onClick={() => setShowCreateEvent(true)}
                 >
@@ -910,7 +915,7 @@ export default function CardshowCenterPage() {
                   Create cardshow
                 </button>
               )}
-            </div>
+            </AppStatePanel>
           ) : (
             <div className="event-list">
               {filteredEvents.map((event) => {

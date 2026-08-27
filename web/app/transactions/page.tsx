@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import AppSidebar from "@/components/app/AppSidebar";
+import AppStatePanel from "@/components/system/AppStatePanel";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -1127,32 +1128,36 @@ export default function TransactionsPage() {
           </div>
 
           {loading ? (
-            <div className="empty-state">
-              <span className="loading-spinner" />
-              <div>
-                <h3>Loading transactions</h3>
-                <p>Preparing cards, collections and financial details.</p>
-              </div>
-            </div>
+            <AppStatePanel
+              description="Preparing cards, collections and financial details."
+              headingLevel="h3"
+              loading
+              title="Loading transactions"
+            />
           ) : filteredTransactions.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">T</div>
-              <div>
-                <h3>No matching transactions</h3>
-                <p>
-                  Record a completed sale from a card detail page, or clear the
-                  active filters.
-                </p>
-              </div>
-
+            <AppStatePanel
+              description="Record a completed sale from a card detail page, or clear the active filters."
+              headingLevel="h3"
+              icon="↕"
+              title="No matching transactions"
+            >
               {hasActiveFilters ? (
-                <button type="button" onClick={clearFilters}>
+                <button
+                  className="app-state-action"
+                  type="button"
+                  onClick={clearFilters}
+                >
                   Clear filters
                 </button>
               ) : (
-                <Link href="/cards">Open cards</Link>
+                <Link
+                  className="app-state-action app-state-action-primary"
+                  href="/cards"
+                >
+                  Open cards
+                </Link>
               )}
-            </div>
+            </AppStatePanel>
           ) : (
             <div className="transaction-list">
               {filteredTransactions.map((transaction) => (

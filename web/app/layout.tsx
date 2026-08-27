@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Suspense } from "react";
 
 import MobileNavigation from "@/components/app/MobileNavigation";
+import { InstallExperienceProvider } from "@/components/pwa/InstallExperienceProvider";
 
 import "./globals.css";
 
@@ -26,14 +27,19 @@ export const metadata: Metadata = {
     template: "%s | Vallective",
   },
   description:
-    "Saml, forstå og udvikl din kortportefølje med scanning, markedsdata, grading og Cardshow-værktøjer.",
+    "Scan, organize, value and understand your sports card collection with one intelligent workspace.",
   openGraph: {
     title: "Vallective",
     description: "Collect what matters. Know what it's worth.",
     url: "https://vallective.com",
     siteName: "Vallective",
-    locale: "da_DK",
+    locale: "en_US",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vallective",
+    description: "Collect what matters. Know what it's worth.",
   },
   appleWebApp: {
     capable: true,
@@ -58,14 +64,16 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="da"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <Suspense fallback={null}>
-          <MobileNavigation />
-        </Suspense>
+        <InstallExperienceProvider>
+          {children}
+          <Suspense fallback={null}>
+            <MobileNavigation />
+          </Suspense>
+        </InstallExperienceProvider>
         <Analytics />
         <SpeedInsights />
       </body>
