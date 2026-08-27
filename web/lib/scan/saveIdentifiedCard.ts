@@ -48,6 +48,12 @@ export type SaveIdentifiedCardResult = {
   message: string;
 };
 
+export type ReviewedCardSaveResult = SaveIdentifiedCardResult & {
+  playerName: string;
+
+  estimatedValue: number | null;
+};
+
 type ErrorResponse = {
   error?: unknown;
 };
@@ -67,7 +73,7 @@ function getRequiredText(
   return trimmedValue;
 }
 
-function normalizeOptionalNumber(
+export function normalizeOptionalNumber(
   value:
     | string
     | number
