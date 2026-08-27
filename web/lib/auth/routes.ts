@@ -4,6 +4,8 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/forgot-password",
   "/auth",
   "/manifest.webmanifest",
+  "/opengraph-image",
+  "/twitter-image",
 ] as const;
 
 const GUEST_ONLY_ROUTE_PREFIXES = [

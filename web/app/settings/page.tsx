@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 
 import AppSidebar from "@/components/app/AppSidebar";
+import InstallAppCard from "@/components/pwa/InstallAppCard";
 import {
   getUserIdentity,
   type UserIdentity,
@@ -23,7 +24,7 @@ function formatDate(value: string | undefined) {
     return "Not available";
   }
 
-  return new Intl.DateTimeFormat("da-DK", {
+  return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -82,13 +83,13 @@ export default function SettingsPage() {
 
     if (normalizedName.length < 2) {
       setMessageTone("error");
-      setMessage("Dit visningsnavn skal være mindst 2 tegn.");
+      setMessage("Your display name must contain at least 2 characters.");
       return;
     }
 
     if (normalizedName.length > 80) {
       setMessageTone("error");
-      setMessage("Dit visningsnavn må højst være 80 tegn.");
+      setMessage("Your display name cannot exceed 80 characters.");
       return;
     }
 
@@ -106,8 +107,8 @@ export default function SettingsPage() {
       setMessageTone("error");
       setMessage(
         error?.message
-          ? `Profilen kunne ikke gemmes: ${error.message}`
-          : "Profilen kunne ikke gemmes. Prøv igen."
+          ? `Your profile could not be saved: ${error.message}`
+          : "Your profile could not be saved. Please try again."
       );
       setSaving(false);
       return;
@@ -118,7 +119,7 @@ export default function SettingsPage() {
     setIdentity(updatedIdentity);
     setDisplayName(updatedIdentity.displayName);
     setMessageTone("success");
-    setMessage("Profilen er opdateret på tværs af Vallective.");
+    setMessage("Your profile is updated across Vallective.");
     setSaving(false);
   }
 
@@ -132,8 +133,8 @@ export default function SettingsPage() {
             <p className="eyebrow">Your account</p>
             <h1>Settings</h1>
             <p>
-              Administrér den identitet, der vises i dit Vallective-workspace,
-              og hold din konto sikker.
+              Manage the identity shown across your Vallective workspace and
+              keep your account secure.
             </p>
           </div>
 
@@ -215,6 +216,8 @@ export default function SettingsPage() {
             </section>
 
             <aside className="settings-side-column">
+              <InstallAppCard />
+
               <section className="settings-panel security-panel">
                 <div>
                   <p className="eyebrow">Security</p>

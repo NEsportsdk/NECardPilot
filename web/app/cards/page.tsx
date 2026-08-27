@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 
 import AddCardModal from "@/components/AddCardModal";
 import AppSidebar from "@/components/app/AppSidebar";
+import AppStatePanel from "@/components/system/AppStatePanel";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -1174,38 +1175,35 @@ export default function GlobalCardsPage() {
           </div>
 
           {loading ? (
-            <div className="library-loading">
-              <span className="loading-spinner" />
-              <p>Loading your card library...</p>
-            </div>
+            <AppStatePanel
+              description="Preparing your cards, images, collection details and current values."
+              loading
+              title="Opening your card library"
+            />
           ) : filteredCards.length === 0 ? (
-            <div className="library-empty">
-              <span>▱</span>
-              <h2>No matching cards</h2>
-              <p>
-                Adjust the filters, search for another term or add a new card.
-              </p>
-
-              <div>
-                {hasActiveFilters && (
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={clearFilters}
-                  >
-                    Clear filters
-                  </button>
-                )}
-
+            <AppStatePanel
+              description="Adjust your filters, try another search term or add a new card to the collection."
+              icon="▱"
+              title="No matching cards"
+            >
+              {hasActiveFilters ? (
                 <button
-                  className="primary-button"
+                  className="app-state-action"
                   type="button"
-                  onClick={() => setShowAddCard(true)}
+                  onClick={clearFilters}
                 >
-                  Add card
+                  Clear filters
                 </button>
-              </div>
-            </div>
+              ) : null}
+
+              <button
+                className="app-state-action app-state-action-primary"
+                type="button"
+                onClick={() => setShowAddCard(true)}
+              >
+                Add card
+              </button>
+            </AppStatePanel>
           ) : viewMode === "grid" ? (
             <div className="global-card-grid">
               {filteredCards.map((card) => (

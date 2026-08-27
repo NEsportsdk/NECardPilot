@@ -1236,3 +1236,88 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.route-loading-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(124, 92, 255, 0.12), transparent 34%),
+    #07090d;
+  color: #f8fafc;
+}
+
+.route-loading-content {
+  width: min(100%, 460px);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.route-loading-mark {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #a88cff, #6552e8);
+  color: #ffffff;
+  box-shadow: 0 18px 45px rgba(101, 82, 232, 0.3);
+}
+
+.route-loading-mark svg {
+  width: 44px;
+  height: 44px;
+}
+
+.route-loading-content p {
+  margin: 24px 0 7px;
+  color: #a99dff;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.route-loading-content h1 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(22px, 5vw, 31px);
+  letter-spacing: -0.045em;
+}
+
+.route-loading-progress {
+  width: min(100%, 230px);
+  height: 3px;
+  margin-top: 28px;
+  overflow: hidden;
+  position: relative;
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.12);
+}
+
+.route-loading-progress::after {
+  content: "";
+  width: 42%;
+  height: 100%;
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8b6dff, #c4b5fd);
+  animation: route-loading-progress 1.15s ease-in-out infinite alternate;
+}
+
+@keyframes route-loading-progress {
+  to {
+    transform: translateX(138%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-progress::after {
+    width: 100%;
+    animation: none;
+    opacity: 0.65;
+  }
+}

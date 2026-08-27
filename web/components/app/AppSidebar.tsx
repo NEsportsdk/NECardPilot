@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import AuthenticatedUserCard, {
   type UserIdentity,
 } from "@/components/auth/AuthenticatedUserCard";
+import VallectiveMark from "@/components/brand/VallectiveMark";
 
 type AppSidebarVariant =
   | "rail"
@@ -92,7 +93,9 @@ export default function AppSidebar({
     <aside className={`app-sidebar app-sidebar-${variant}`}>
       <div className="sidebar-top">
         <Link className="brand" href="/" aria-label="Vallective home">
-          <div className="brand-mark">V</div>
+          <span className="brand-mark" aria-hidden="true">
+            <VallectiveMark />
+          </span>
 
           <div className="brand-copy">
             <p className="brand-name">Vallective</p>
@@ -193,11 +196,21 @@ export default function AppSidebar({
           box-shadow: 0 14px 35px rgba(124, 92, 255, 0.28);
         }
 
+        .brand-mark :global(svg) {
+          width: 29px;
+          height: 29px;
+        }
+
         .app-sidebar-rail .brand-mark {
           width: 38px;
           height: 38px;
           border-radius: 12px;
           font-size: 17px;
+        }
+
+        .app-sidebar-rail .brand-mark :global(svg) {
+          width: 24px;
+          height: 24px;
         }
 
         .brand-name,
