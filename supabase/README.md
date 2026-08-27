@@ -1,6 +1,6 @@
 # Supabase workflow
 
-Migrations in this directory are local source control for the NECardPilot
+Migrations in this directory are local source control for the Vallective
 database. They are not applied automatically to the connected live project.
 
 ## Current files

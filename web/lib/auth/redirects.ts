@@ -83,7 +83,7 @@ export function getSafeNextPath(value: unknown, fallback = "/") {
   }
 
   try {
-    const base = new URL("https://necardpilot.local");
+    const base = new URL("https://vallective.local");
     const resolved = new URL(candidate, base);
 
     if (resolved.origin !== base.origin) {

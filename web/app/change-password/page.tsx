@@ -296,7 +296,7 @@ export default function ChangePasswordPage() {
         </form>
 
         <p className="privacy-note">
-          Adgangskoden vises eller gemmes ikke i NECardPilot. Den sendes direkte
+          Adgangskoden vises eller gemmes ikke i Vallective. Den sendes direkte
           til Supabase Auth.
         </p>
       </section>

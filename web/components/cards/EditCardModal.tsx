@@ -727,7 +727,7 @@ export default function EditCardModal({
                       These fields control
                       how the card appears
                       throughout
-                      NECardPilot.
+                      Vallective.
                     </p>
                   </div>
                 </div>

@@ -582,7 +582,7 @@ export default function RecordSaleModal({
               <strong>
                 {playerName}
               </strong>
-              . NECardPilot calculates
+              . Vallective calculates
               your net proceeds and
               realized profit before
               confirming the transaction.

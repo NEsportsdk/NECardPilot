@@ -33,7 +33,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   return (
     <AuthShell
       title="Opret din konto"
-      description="Start din sikre kortsamling og få hele NECardPilot samlet ét sted."
+      description="Start din sikre kortsamling og få hele Vallective samlet ét sted."
       footer="Vi sender kun kontomails, som er nødvendige for login og sikkerhed."
     >
       {errorMessage && (
@@ -49,7 +49,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             role="status"
           >
             Tjek din indbakke. Hvis adressen kan bruges, har vi sendt et
-            bekræftelseslink, som åbner din nye NECardPilot-konto.
+            bekræftelseslink, som åbner din nye Vallective-konto.
           </div>
           <nav className={styles.actionLinks} aria-label="Kontohjælp">
             <Link className={styles.link} href={loginHref}>

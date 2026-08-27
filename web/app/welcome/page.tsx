@@ -51,7 +51,7 @@ export default async function WelcomePage() {
   return (
     <main className={styles.page}>
       <section className={styles.content}>
-        <p className={styles.eyebrow}>VELKOMMEN TIL NECARDPILOT</p>
+        <p className={styles.eyebrow}>VELKOMMEN TIL VALLECTIVE</p>
         <h1 className={styles.title}>Godt at have dig med, {displayName}.</h1>
         <p className={styles.intro}>
           Din konto er klar. På få minutter kan du oprette din første samling,
@@ -72,7 +72,7 @@ export default async function WelcomePage() {
         </div>
 
         <Link className={styles.primaryLink} href="/">
-          Gå til NECardPilot
+          Gå til Vallective
         </Link>
       </section>
     </main>
