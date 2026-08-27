@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import type { DuplicateCardIdentity } from "@/lib/cards/duplicateCards";
+import { findDuplicateCards } from "@/lib/cards/findDuplicateCards";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -40,6 +42,7 @@ type SaveScannedCardRequest = {
   purchaseSource?: unknown;
   userNotes?: unknown;
   editedFields?: unknown;
+  allowDuplicate?: unknown;
 };
 
 class RequestError extends Error {
@@ -407,6 +410,9 @@ export async function POST(
         )
       );
 
+    const allowDuplicate =
+      body.allowDuplicate === true;
+
     if (
       purchasePrice !== null &&
       purchasePrice < 0
@@ -483,6 +489,43 @@ export async function POST(
       throw new RequestError(
         "Kortbillederne tilhører ikke den valgte collection eller scanning.",
         403
+      );
+    }
+
+    const duplicateIdentity: DuplicateCardIdentity = {
+      playerName,
+      year,
+      manufacturer,
+      brand,
+      product,
+      setName,
+      cardNumber,
+      parallel,
+      serialNumber,
+    };
+
+    const duplicateCheck =
+      await findDuplicateCards(
+        supabase,
+        userId,
+        duplicateIdentity
+      );
+
+    if (
+      duplicateCheck.requiresAcknowledgement &&
+      !allowDuplicate
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Vallective fandt et sandsynligt match i dit kortbibliotek. Bekræft, at dette er endnu et fysisk eksemplar, før du gemmer.",
+          code:
+            "DUPLICATE_CONFIRMATION_REQUIRED",
+          ...duplicateCheck,
+        },
+        {
+          status: 409,
+        }
       );
     }
 
