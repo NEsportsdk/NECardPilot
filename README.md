@@ -9,7 +9,7 @@ og markedsanalyse.
 
 Krav:
 
-- Node.js 22 eller nyere
+- Node.js 24 (se `web/.nvmrc`)
 - npm
 - adgang til det relevante Supabase-projekt
 - en OpenAI API-nøgle til AI-funktionerne
@@ -33,6 +33,7 @@ Kør kontrollerne enkeltvis:
 cd web
 npm run typecheck
 npm run lint
+npm run test:run
 npm run build
 ```
 
@@ -42,6 +43,14 @@ Eller samlet:
 cd web
 npm run check
 ```
+
+`npm run check` er den samme quality gate, som GitHub Actions kører ved pull
+requests og pushes til `main`: typecheck, lint, automatiske tests og et fuldt
+produktionsbuild.
+
+Vercel Web Analytics og Speed Insights er indbygget i root-layoutet. Uventede
+serverfejl logges som strukturerede JSON-events via Next.js instrumentation, og
+appens error boundaries viser en sikker fejlreference til brugeren.
 
 ## Deployment
 
