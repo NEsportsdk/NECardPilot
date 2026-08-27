@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
   useCallback,
@@ -318,12 +319,14 @@ function escapeCsvValue(value: unknown) {
 }
 
 export default function TransactionsPage() {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [collections, setCollections] = useState<CollectionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] =
@@ -594,6 +597,17 @@ export default function TransactionsPage() {
     void loadTransactions();
   }, [loadTransactions]);
 
+  useEffect(() => {
+    function updateCurrentTime() {
+      setCurrentTime(Date.now());
+    }
+
+    updateCurrentTime();
+    const intervalId = window.setInterval(updateCurrentTime, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const platforms = useMemo(
     () =>
       Array.from(
@@ -608,7 +622,6 @@ export default function TransactionsPage() {
 
   const filteredTransactions = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    const now = Date.now();
     const dateRangeDays = dateRangeFilter === "all"
       ? null
       : Number(dateRangeFilter);
@@ -642,9 +655,9 @@ export default function TransactionsPage() {
         return false;
       }
 
-      if (dateRangeDays !== null) {
+      if (dateRangeDays !== null && currentTime !== null) {
         const transactionTime = new Date(transaction.occurredAt).getTime();
-        const cutoff = now - dateRangeDays * 24 * 60 * 60 * 1000;
+        const cutoff = currentTime - dateRangeDays * 24 * 60 * 60 * 1000;
 
         if (!Number.isFinite(transactionTime) || transactionTime < cutoff) {
           return false;
@@ -723,6 +736,7 @@ export default function TransactionsPage() {
     });
   }, [
     collectionFilter,
+    currentTime,
     dateRangeFilter,
     platformFilter,
     resultFilter,
@@ -902,7 +916,7 @@ export default function TransactionsPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.replace("/login");
   }
 
   return (

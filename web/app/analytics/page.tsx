@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
   useCallback,
@@ -486,6 +487,7 @@ function getCardSubtitle(card: AnalyticsCard) {
 }
 
 export default function AnalyticsPage() {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [collections, setCollections] = useState<CollectionRow[]>([]);
@@ -507,7 +509,7 @@ export default function AnalyticsPage() {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      window.location.href = "/login";
+      router.replace("/login");
       return;
     }
 
@@ -682,7 +684,7 @@ export default function AnalyticsPage() {
     }
 
     setLoading(false);
-  }, [supabase]);
+  }, [router, supabase]);
 
   useEffect(() => {
     void loadAnalytics();

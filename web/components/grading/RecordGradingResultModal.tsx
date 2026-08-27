@@ -544,7 +544,7 @@ export default function RecordGradingResultModal({
               <div className="result-information">
                 <span>i</span>
                 <p>
-                  The grade is stored now. It is written into the card's Card
+                  The grade is stored now. It is written into the card’s Card
                   DNA when the submission is marked Returned.
                 </p>
               </div>

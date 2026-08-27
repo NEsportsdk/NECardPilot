@@ -5,12 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-type PurchaseLotCardRequest = {
-  cardId?: unknown;
-  referenceValue?: unknown;
-  manualAllocatedCost?: unknown;
-};
-
 type CreatePurchaseLotRequest = {
   name?: unknown;
   allocationMethod?: unknown;

@@ -5,22 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-type InventoryItemRequest = {
-  cardId?: unknown;
-  status?: unknown;
-  askingPrice?: unknown;
-  floorPrice?: unknown;
-  priceSource?: unknown;
-  priceGroupLabel?: unknown;
-  priceGroupAmount?: unknown;
-  locationLabel?: unknown;
-  inventoryCode?: unknown;
-  reservedFor?: unknown;
-  reservationNote?: unknown;
-  reservedUntil?: unknown;
-  notes?: unknown;
-};
-
 type UpsertInventoryRequest = {
   eventId?: unknown;
   items?: unknown;

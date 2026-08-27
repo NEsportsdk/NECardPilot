@@ -12,8 +12,9 @@ import type {
 } from "@/lib/scan/identifyCard";
 
 import {
+  normalizeOptionalNumber,
   saveIdentifiedCard,
-  type SaveIdentifiedCardResult,
+  type ReviewedCardSaveResult,
 } from "@/lib/scan/saveIdentifiedCard";
 
 import type {
@@ -34,8 +35,8 @@ type AIReviewPanelProps = {
   onScanAgain: () => void;
 
   onSaved: (
-    result: SaveIdentifiedCardResult
-  ) => void;
+    result: ReviewedCardSaveResult
+  ) => void | Promise<void>;
 };
 
 type EditableTextField =
@@ -586,6 +587,12 @@ export default function AIReviewPanel({
       return;
     }
 
+    const playerName = draftCard.playerName?.trim();
+
+    if (!playerName) {
+      return;
+    }
+
     setIsSaving(true);
     setErrorMessage(null);
 
@@ -628,7 +635,14 @@ export default function AIReviewPanel({
             ),
         });
 
-      onSaved(result);
+      await onSaved({
+        ...result,
+        playerName,
+        estimatedValue: normalizeOptionalNumber(
+          estimatedValue,
+          "Den estimerede værdi"
+        ),
+      });
     } catch (error) {
       setErrorMessage(
         getReadableError(error)

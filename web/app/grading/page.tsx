@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -492,6 +493,7 @@ function normalizeGradingSubgrades(
 }
 
 export default function GradingCenterPage() {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [submissions, setSubmissions] = useState<GradingSubmission[]>([]);
@@ -520,7 +522,7 @@ export default function GradingCenterPage() {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      window.location.href = "/login";
+      router.replace("/login");
       return;
     }
 
@@ -843,7 +845,7 @@ export default function GradingCenterPage() {
     }
 
     setLoading(false);
-  }, [supabase]);
+  }, [router, supabase]);
 
   useEffect(() => {
     void loadGradingCenter();
@@ -1049,7 +1051,7 @@ export default function GradingCenterPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.replace("/login");
   }
 
   return (

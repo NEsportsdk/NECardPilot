@@ -10,9 +10,19 @@ import {
 } from "react";
 
 import ScanCardModal from "@/components/ScanCardModal";
+import RapidIntakePanel from "@/components/scan/RapidIntakePanel";
+import { upsertCardshowInventory } from "@/lib/cardshow/upsertCardshowInventory";
 import type {
-  SaveIdentifiedCardResult,
+  ReviewedCardSaveResult,
 } from "@/lib/scan/saveIdentifiedCard";
+import {
+  DEFAULT_RAPID_INTAKE_SETTINGS,
+  getRapidIntakeReadinessError,
+  prepareRapidIntakeItem,
+  readRapidIntakeSettings,
+  type RapidIntakeEvent,
+  type RapidIntakeSettings,
+} from "@/lib/scan/rapidIntake";
 import { createClient } from "@/lib/supabase/client";
 
 type CollectionType = "pc" | "inventory";
@@ -27,11 +37,24 @@ type CollectionRow = {
 
 type SessionEntry = {
   cardId: string;
+  playerName?: string;
   state: "verified" | "needs_review";
   message: string;
   collectionId: string;
   collectionName: string;
   savedAt: string;
+  estimatedValue?: number | null;
+  inventoryStatus?:
+    | "not_requested"
+    | "adding"
+    | "added"
+    | "failed";
+  inventoryMessage?: string;
+  eventId?: string;
+  eventName?: string;
+  askingPrice?: number | null;
+  floorPrice?: number | null;
+  needsPricing?: boolean;
 };
 
 type NavigationItem = {
@@ -50,6 +73,15 @@ const CONTINUOUS_MODE_KEY =
 
 const SESSION_STATE_KEY =
   "necardpilot.scanner.sessionState";
+
+const RAPID_INTAKE_ENABLED_KEY =
+  "necardpilot.scanner.rapidIntakeEnabled";
+
+const RAPID_INTAKE_EVENT_KEY =
+  "necardpilot.scanner.rapidIntakeEventId";
+
+const RAPID_INTAKE_SETTINGS_KEY =
+  "necardpilot.scanner.rapidIntakeSettings";
 
 const AUTO_CONTINUE_DELAY_MS = 2200;
 
@@ -100,6 +132,12 @@ function isSessionEntry(value: unknown): value is SessionEntry {
   }
 
   const entry = value as Record<string, unknown>;
+  const inventoryStatuses = new Set([
+    "not_requested",
+    "adding",
+    "added",
+    "failed",
+  ]);
 
   return (
     typeof entry.cardId === "string" &&
@@ -107,7 +145,27 @@ function isSessionEntry(value: unknown): value is SessionEntry {
     typeof entry.message === "string" &&
     typeof entry.collectionId === "string" &&
     typeof entry.collectionName === "string" &&
-    typeof entry.savedAt === "string"
+    typeof entry.savedAt === "string" &&
+    (entry.playerName === undefined ||
+      typeof entry.playerName === "string") &&
+    (entry.estimatedValue === undefined ||
+      entry.estimatedValue === null ||
+      typeof entry.estimatedValue === "number") &&
+    (entry.inventoryStatus === undefined ||
+      (typeof entry.inventoryStatus === "string" &&
+        inventoryStatuses.has(entry.inventoryStatus))) &&
+    (entry.inventoryMessage === undefined ||
+      typeof entry.inventoryMessage === "string") &&
+    (entry.eventId === undefined || typeof entry.eventId === "string") &&
+    (entry.eventName === undefined || typeof entry.eventName === "string") &&
+    (entry.askingPrice === undefined ||
+      entry.askingPrice === null ||
+      typeof entry.askingPrice === "number") &&
+    (entry.floorPrice === undefined ||
+      entry.floorPrice === null ||
+      typeof entry.floorPrice === "number") &&
+    (entry.needsPricing === undefined ||
+      typeof entry.needsPricing === "boolean")
   );
 }
 
@@ -154,6 +212,8 @@ export default function ScannerPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const [collections, setCollections] = useState<CollectionRow[]>([]);
+  const [cardshowEvents, setCardshowEvents] =
+    useState<RapidIntakeEvent[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -170,6 +230,14 @@ export default function ScannerPage() {
   const [autoContinueSeconds, setAutoContinueSeconds] =
     useState<number | null>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
+  const [rapidIntakeEnabled, setRapidIntakeEnabled] = useState(false);
+  const [selectedCardshowEventId, setSelectedCardshowEventId] =
+    useState("");
+  const [rapidIntakeSettings, setRapidIntakeSettings] =
+    useState<RapidIntakeSettings>(() => ({
+      ...DEFAULT_RAPID_INTAKE_SETTINGS,
+    }));
+  const [rapidIntakeRestored, setRapidIntakeRestored] = useState(false);
 
   const autoContinueTimeoutRef = useRef<number | null>(null);
   const autoContinueIntervalRef = useRef<number | null>(null);
@@ -231,8 +299,61 @@ export default function ScannerPage() {
       setSessionFinished(storedSession.finished);
     }
 
+    setRapidIntakeEnabled(
+      window.localStorage.getItem(RAPID_INTAKE_ENABLED_KEY) === "true"
+    );
+    setSelectedCardshowEventId(
+      window.localStorage.getItem(RAPID_INTAKE_EVENT_KEY) ?? ""
+    );
+
+    try {
+      const storedSettings = window.localStorage.getItem(
+        RAPID_INTAKE_SETTINGS_KEY
+      );
+
+      setRapidIntakeSettings(
+        storedSettings
+          ? readRapidIntakeSettings(JSON.parse(storedSettings) as unknown)
+          : { ...DEFAULT_RAPID_INTAKE_SETTINGS }
+      );
+    } catch (error) {
+      console.error("Rapid intake settings could not be restored:", error);
+      setRapidIntakeSettings({ ...DEFAULT_RAPID_INTAKE_SETTINGS });
+    }
+
     setSessionRestored(true);
+    setRapidIntakeRestored(true);
   }, []);
+
+  useEffect(() => {
+    if (!rapidIntakeRestored) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      RAPID_INTAKE_ENABLED_KEY,
+      String(rapidIntakeEnabled)
+    );
+
+    if (selectedCardshowEventId) {
+      window.localStorage.setItem(
+        RAPID_INTAKE_EVENT_KEY,
+        selectedCardshowEventId
+      );
+    } else {
+      window.localStorage.removeItem(RAPID_INTAKE_EVENT_KEY);
+    }
+
+    window.localStorage.setItem(
+      RAPID_INTAKE_SETTINGS_KEY,
+      JSON.stringify(rapidIntakeSettings)
+    );
+  }, [
+    rapidIntakeEnabled,
+    rapidIntakeRestored,
+    rapidIntakeSettings,
+    selectedCardshowEventId,
+  ]);
 
   useEffect(() => {
     if (!sessionRestored) {
@@ -284,28 +405,60 @@ export default function ScannerPage() {
         );
       }
 
-      const { data, error } = await supabase
-        .from("collections")
-        .select(`
-          id,
-          name,
-          type,
-          currency,
-          created_at
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true });
+      const [collectionResult, eventResult] = await Promise.all([
+        supabase
+          .from("collections")
+          .select(`
+            id,
+            name,
+            type,
+            currency,
+            created_at
+          `)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("cardshow_events")
+          .select(`
+            id,
+            name,
+            status,
+            currency,
+            starts_at
+          `)
+          .eq("user_id", user.id)
+          .in("status", ["planning", "active"])
+          .order("starts_at", {
+            ascending: true,
+            nullsFirst: false,
+          }),
+      ]);
 
-      if (error) {
+      if (collectionResult.error) {
         throw new Error(
-          `Dine collections kunne ikke indlæses: ${error.message}`
+          `Dine collections kunne ikke indlæses: ${collectionResult.error.message}`
         );
       }
 
       const nextCollections =
-        (data ?? []) as CollectionRow[];
+        (collectionResult.data ?? []) as CollectionRow[];
+
+      if (eventResult.error) {
+        throw new Error(
+          `Dine Cardshows kunne ikke indlæses: ${eventResult.error.message}`
+        );
+      }
+
+      const nextEvents = (eventResult.data ?? []).map((event) => ({
+        id: event.id as string,
+        name: event.name as string,
+        status: event.status as RapidIntakeEvent["status"],
+        currency: event.currency as string,
+        startsAt: event.starts_at as string | null,
+      }));
 
       setCollections(nextCollections);
+      setCardshowEvents(nextEvents);
 
       const storedCollectionId =
         window.localStorage.getItem(
@@ -334,8 +487,24 @@ export default function ScannerPage() {
       } else {
         setSelectedCollectionId("");
       }
+
+      const storedEventId = window.localStorage.getItem(
+        RAPID_INTAKE_EVENT_KEY
+      );
+
+      if (
+        storedEventId &&
+        nextEvents.some((event) => event.id === storedEventId)
+      ) {
+        setSelectedCardshowEventId(storedEventId);
+      } else if (nextEvents.length === 1) {
+        setSelectedCardshowEventId(nextEvents[0]?.id ?? "");
+      } else {
+        setSelectedCardshowEventId("");
+      }
     } catch (error) {
       setCollections([]);
+      setCardshowEvents([]);
       setSelectedCollectionId("");
       setErrorMessage(getReadableError(error));
     } finally {
@@ -356,8 +525,24 @@ export default function ScannerPage() {
     [collections, selectedCollectionId]
   );
 
+  const selectedCardshowEvent = useMemo(
+    () =>
+      cardshowEvents.find(
+        (event) => event.id === selectedCardshowEventId
+      ) ?? null,
+    [cardshowEvents, selectedCardshowEventId]
+  );
+
   const destinationLocked =
     sessionEntries.length > 0 && !sessionFinished;
+
+  const rapidIntakeReadinessError = getRapidIntakeReadinessError({
+    enabled: rapidIntakeEnabled,
+    collectionType: selectedCollection?.type ?? null,
+    collectionCurrency: selectedCollection?.currency ?? null,
+    event: selectedCardshowEvent,
+    settings: rapidIntakeSettings,
+  });
 
   const verifiedCount = sessionEntries.filter(
     (entry) => entry.state === "verified"
@@ -365,6 +550,14 @@ export default function ScannerPage() {
 
   const reviewCount = sessionEntries.filter(
     (entry) => entry.state === "needs_review"
+  ).length;
+
+  const rapidIntakeAddedCount = sessionEntries.filter(
+    (entry) => entry.inventoryStatus === "added"
+  ).length;
+
+  const rapidIntakeFailedCount = sessionEntries.filter(
+    (entry) => entry.inventoryStatus === "failed"
   ).length;
 
   function handleSelectCollection(collectionId: string) {
@@ -393,6 +586,44 @@ export default function ScannerPage() {
     }
   }
 
+  function handleRapidIntakeEnabledChange(enabled: boolean) {
+    if (destinationLocked) {
+      setErrorMessage(
+        "Finish the current session before changing Rapid intake."
+      );
+      return;
+    }
+
+    setRapidIntakeEnabled(enabled);
+    setErrorMessage(null);
+  }
+
+  function handleCardshowEventChange(eventId: string) {
+    if (destinationLocked) {
+      setErrorMessage(
+        "Finish the current session before changing its Cardshow."
+      );
+      return;
+    }
+
+    setSelectedCardshowEventId(eventId);
+    setErrorMessage(null);
+  }
+
+  function handleRapidIntakeSettingsChange(
+    settings: RapidIntakeSettings
+  ) {
+    if (destinationLocked) {
+      setErrorMessage(
+        "Finish the current session before changing Rapid intake pricing."
+      );
+      return;
+    }
+
+    setRapidIntakeSettings(settings);
+    setErrorMessage(null);
+  }
+
   function handleContinuousModeChange(enabled: boolean) {
     setContinuousMode(enabled);
     window.localStorage.setItem(
@@ -415,6 +646,11 @@ export default function ScannerPage() {
       return;
     }
 
+    if (rapidIntakeReadinessError) {
+      setErrorMessage(rapidIntakeReadinessError);
+      return;
+    }
+
     if (sessionFinished) {
       setSessionEntries([]);
       setSessionStartedAt(new Date().toISOString());
@@ -428,8 +664,69 @@ export default function ScannerPage() {
     setShowScanner(true);
   }
 
-  function handleCardSaved(
-    result: SaveIdentifiedCardResult
+  function replaceSessionEntry(nextEntry: SessionEntry) {
+    setSessionEntries((currentEntries) =>
+      currentEntries.map((entry) =>
+        entry.cardId === nextEntry.cardId &&
+        entry.savedAt === nextEntry.savedAt
+          ? nextEntry
+          : entry
+      )
+    );
+  }
+
+  async function addEntryToCardshow(
+    entry: SessionEntry,
+    event: RapidIntakeEvent
+  ): Promise<SessionEntry> {
+    const preparedItem = prepareRapidIntakeItem(
+      {
+        cardId: entry.cardId,
+        estimatedValue: entry.estimatedValue ?? null,
+      },
+      rapidIntakeSettings
+    );
+
+    const pendingEntry: SessionEntry = {
+      ...entry,
+      inventoryStatus: "adding",
+      inventoryMessage: `Adding to ${event.name}…`,
+      eventId: event.id,
+      eventName: event.name,
+      askingPrice: preparedItem.askingPrice,
+      floorPrice: preparedItem.floorPrice,
+      needsPricing: preparedItem.needsPricing,
+    };
+
+    replaceSessionEntry(pendingEntry);
+
+    try {
+      const inventoryResult = await upsertCardshowInventory({
+        eventId: event.id,
+        items: [preparedItem.item],
+      });
+
+      return {
+        ...pendingEntry,
+        inventoryStatus: "added",
+        inventoryMessage: preparedItem.needsPricing
+          ? `${inventoryResult.message} Pricing is still required.`
+          : inventoryResult.message,
+      };
+    } catch (error) {
+      return {
+        ...pendingEntry,
+        inventoryStatus: "failed",
+        inventoryMessage:
+          error instanceof Error
+            ? error.message
+            : "Cardshow inventory could not be updated.",
+      };
+    }
+  }
+
+  async function handleCardSaved(
+    result: ReviewedCardSaveResult
   ) {
     if (!selectedCollection) {
       return;
@@ -437,18 +734,37 @@ export default function ScannerPage() {
 
     const entry: SessionEntry = {
       cardId: result.cardId,
+      playerName: result.playerName,
       state: result.state,
       message: result.message,
       collectionId: selectedCollection.id,
       collectionName: selectedCollection.name,
       savedAt: new Date().toISOString(),
+      estimatedValue: result.estimatedValue,
+      inventoryStatus: rapidIntakeEnabled ? "adding" : "not_requested",
+      inventoryMessage: rapidIntakeEnabled
+        ? "Preparing Cardshow inventory…"
+        : undefined,
+      eventId: rapidIntakeEnabled
+        ? selectedCardshowEvent?.id
+        : undefined,
+      eventName: rapidIntakeEnabled
+        ? selectedCardshowEvent?.name
+        : undefined,
     };
 
     setSessionEntries((currentEntries) => [
       entry,
       ...currentEntries,
     ]);
-    setLastSaved(entry);
+
+    const completedEntry =
+      rapidIntakeEnabled && selectedCardshowEvent
+        ? await addEntryToCardshow(entry, selectedCardshowEvent)
+        : entry;
+
+    replaceSessionEntry(completedEntry);
+    setLastSaved(completedEntry);
 
     if (
       typeof navigator !== "undefined" &&
@@ -459,6 +775,30 @@ export default function ScannerPage() {
 
     if (continuousMode) {
       scheduleAutoContinue();
+    }
+  }
+
+  async function handleRetryRapidIntake(entry: SessionEntry) {
+    const event = cardshowEvents.find(
+      (candidate) => candidate.id === entry.eventId
+    );
+
+    if (!event) {
+      setErrorMessage(
+        "The Cardshow is no longer planning or active. Choose a new session."
+      );
+      return;
+    }
+
+    setErrorMessage(null);
+    const completedEntry = await addEntryToCardshow(entry, event);
+    replaceSessionEntry(completedEntry);
+
+    if (
+      lastSaved?.cardId === completedEntry.cardId &&
+      lastSaved.savedAt === completedEntry.savedAt
+    ) {
+      setLastSaved(completedEntry);
     }
   }
 
@@ -565,9 +905,9 @@ export default function ScannerPage() {
             <p className="eyebrow">Mobile workspace</p>
             <h1>Global Scanner</h1>
             <p className="scanner-description">
-              Choose a destination once, photograph both sides,
-              review the AI result and continue directly with the
-              next card.
+              Choose a collection and optional Cardshow once, photograph both
+              sides, review the AI result and continue directly with the next
+              card.
             </p>
           </div>
 
@@ -580,7 +920,11 @@ export default function ScannerPage() {
               className="primary-button"
               type="button"
               onClick={handleStartScanner}
-              disabled={loading || !selectedCollection}
+              disabled={
+                loading ||
+                !selectedCollection ||
+                Boolean(rapidIntakeReadinessError)
+              }
             >
               <span>◎</span>
               Start scanning
@@ -604,10 +948,19 @@ export default function ScannerPage() {
             <strong>{reviewCount}</strong>
           </article>
 
-          <article>
+          <article className="destination-metric">
             <span>Destination</span>
-            <strong>
+            <strong title={selectedCollection?.name}>
               {selectedCollection?.name ?? "Not selected"}
+            </strong>
+          </article>
+
+          <article>
+            <span>Cardshow intake</span>
+            <strong>
+              {rapidIntakeEnabled
+                ? `${rapidIntakeAddedCount} added`
+                : "Off"}
             </strong>
           </article>
         </section>
@@ -643,7 +996,48 @@ export default function ScannerPage() {
                         : "Needs review"}
                     </span>
                     <span>{formatTime(lastSaved.savedAt)}</span>
+                    {lastSaved.eventName ? (
+                      <span>{lastSaved.eventName}</span>
+                    ) : null}
                   </div>
+
+                  {lastSaved.inventoryStatus &&
+                  lastSaved.inventoryStatus !== "not_requested" ? (
+                    <div
+                      className={`inventory-sync inventory-sync-${lastSaved.inventoryStatus}`}
+                      data-testid="rapid-intake-result"
+                    >
+                      <span>
+                        {lastSaved.inventoryStatus === "added" ? "✓" : "!"}
+                      </span>
+                      <div>
+                        <strong>
+                          {lastSaved.inventoryStatus === "added"
+                            ? "Added to Cardshow inventory"
+                            : "Card saved · inventory needs retry"}
+                        </strong>
+                        <p>{lastSaved.inventoryMessage}</p>
+                        {lastSaved.inventoryStatus === "added" &&
+                        lastSaved.askingPrice !== null &&
+                        lastSaved.askingPrice !== undefined ? (
+                          <small>
+                            Asking {lastSaved.askingPrice.toLocaleString("da-DK")} ·
+                            Floor {lastSaved.floorPrice?.toLocaleString("da-DK") ?? "—"}
+                          </small>
+                        ) : null}
+                      </div>
+
+                      {lastSaved.inventoryStatus === "failed" ? (
+                        <button
+                          data-testid="retry-rapid-intake"
+                          onClick={() => void handleRetryRapidIntake(lastSaved)}
+                          type="button"
+                        >
+                          Retry
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   {autoContinueSeconds !== null && (
                     <div className="auto-continue-banner">
@@ -702,6 +1096,16 @@ export default function ScannerPage() {
                   {verifiedCount} verified and {reviewCount} marked
                   for manual review.
                 </p>
+
+                {rapidIntakeEnabled ? (
+                  <p>
+                    {rapidIntakeAddedCount} added to Cardshow inventory
+                    {rapidIntakeFailedCount > 0
+                      ? ` · ${rapidIntakeFailedCount} need retry`
+                      : ""}
+                    .
+                  </p>
+                ) : null}
 
                 <div className="finished-actions">
                   <button
@@ -767,7 +1171,11 @@ export default function ScannerPage() {
                   className="large-start-button"
                   type="button"
                   onClick={handleStartScanner}
-                  disabled={loading || !selectedCollection}
+                  disabled={
+                    loading ||
+                    !selectedCollection ||
+                    Boolean(rapidIntakeReadinessError)
+                  }
                 >
                   <span>◎</span>
                   Start scanner
@@ -792,30 +1200,63 @@ export default function ScannerPage() {
 
                 <div className="session-list">
                   {sessionEntries.slice(0, 8).map((entry, index) => (
-                    <Link
-                      href={`/cards/${entry.cardId}`}
+                    <article
                       className="session-item"
                       key={`${entry.cardId}-${entry.savedAt}`}
                     >
-                      <span className="session-number">
-                        {sessionEntries.length - index}
-                      </span>
+                      <Link
+                        className="session-card-link"
+                        href={`/cards/${entry.cardId}`}
+                      >
+                        <span className="session-number">
+                          {sessionEntries.length - index}
+                        </span>
 
-                      <div>
-                        <strong>
-                          {entry.state === "verified"
-                            ? "Verified card"
-                            : "Card needs review"}
-                        </strong>
-                        <p>{entry.collectionName}</p>
-                      </div>
+                        <div>
+                          <strong>
+                            {entry.playerName ||
+                              (entry.state === "verified"
+                                ? "Verified card"
+                                : "Card needs review")}
+                          </strong>
+                          <p>{entry.collectionName}</p>
+                        </div>
 
-                      <span className="session-time">
-                        {formatTime(entry.savedAt)}
-                      </span>
+                        <span className="session-time">
+                          {formatTime(entry.savedAt)}
+                        </span>
 
-                      <span className="session-arrow">→</span>
-                    </Link>
+                        <span className="session-arrow">→</span>
+                      </Link>
+
+                      {entry.inventoryStatus &&
+                      entry.inventoryStatus !== "not_requested" ? (
+                        <div
+                          className={`session-inventory session-inventory-${entry.inventoryStatus}`}
+                        >
+                          <span>
+                            {entry.inventoryStatus === "added"
+                              ? "✓"
+                              : entry.inventoryStatus === "adding"
+                                ? "…"
+                                : "!"}
+                          </span>
+                          <p>
+                            {entry.inventoryStatus === "added"
+                              ? `Added to ${entry.eventName}`
+                              : entry.inventoryMessage}
+                          </p>
+                          {entry.inventoryStatus === "failed" ? (
+                            <button
+                              onClick={() => void handleRetryRapidIntake(entry)}
+                              type="button"
+                            >
+                              Retry
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </article>
                   ))}
                 </div>
               </section>
@@ -900,6 +1341,22 @@ export default function ScannerPage() {
               )}
             </section>
 
+            <RapidIntakePanel
+              collectionCurrency={selectedCollection?.currency ?? null}
+              collectionType={selectedCollection?.type ?? null}
+              destinationLocked={destinationLocked}
+              enabled={rapidIntakeEnabled}
+              events={cardshowEvents}
+              loading={loading}
+              onEnabledChange={handleRapidIntakeEnabledChange}
+              onEventChange={handleCardshowEventChange}
+              onSettingsChange={handleRapidIntakeSettingsChange}
+              readinessError={rapidIntakeReadinessError}
+              selectedEvent={selectedCardshowEvent}
+              selectedEventId={selectedCardshowEventId}
+              settings={rapidIntakeSettings}
+            />
+
             <section className="panel continuous-mode-panel">
               <div className="continuous-mode-copy">
                 <p className="eyebrow">Session mode</p>
@@ -963,7 +1420,11 @@ export default function ScannerPage() {
         <button
           type="button"
           onClick={handleStartScanner}
-          disabled={loading || !selectedCollection}
+          disabled={
+            loading ||
+            !selectedCollection ||
+            Boolean(rapidIntakeReadinessError)
+          }
         >
           ◎ Scan card
         </button>
@@ -1269,7 +1730,7 @@ export default function ScannerPage() {
         .scanner-metrics {
           max-width: 1380px;
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 12px;
           margin: 28px auto 0;
         }
@@ -1299,6 +1760,16 @@ export default function ScannerPage() {
           font-size: 21px;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .scanner-metrics .destination-metric strong {
+          display: -webkit-box;
+          overflow-wrap: anywhere;
+          font-size: 15px;
+          line-height: 1.15;
+          white-space: normal;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 3;
         }
 
         .scanner-error {
@@ -1688,6 +2159,76 @@ export default function ScannerPage() {
           font-weight: 750;
         }
 
+        .inventory-sync {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 10px;
+          margin-top: 14px;
+          padding: 12px;
+          border: 1px solid rgba(52, 211, 153, 0.18);
+          border-radius: 13px;
+          background: rgba(16, 185, 129, 0.055);
+        }
+
+        .inventory-sync > span {
+          width: 27px;
+          height: 27px;
+          display: grid;
+          place-items: center;
+          border-radius: 9px;
+          background: rgba(52, 211, 153, 0.1);
+          color: #86efac;
+          font-size: 11px;
+          font-weight: 850;
+        }
+
+        .inventory-sync strong {
+          color: #d1fae5;
+          font-size: 10px;
+        }
+
+        .inventory-sync p,
+        .inventory-sync small {
+          display: block;
+          margin: 4px 0 0;
+          color: #78a99a;
+          font-size: 8px;
+          line-height: 1.45;
+        }
+
+        .inventory-sync-failed {
+          border-color: rgba(248, 113, 113, 0.22);
+          background: rgba(239, 68, 68, 0.065);
+        }
+
+        .inventory-sync-failed > span {
+          background: rgba(248, 113, 113, 0.11);
+          color: #fca5a5;
+        }
+
+        .inventory-sync-failed strong {
+          color: #fecaca;
+        }
+
+        .inventory-sync-failed p {
+          color: #d69b9b;
+        }
+
+        .inventory-sync button,
+        .session-inventory button {
+          min-height: 31px;
+          padding: 0 9px;
+          border: 1px solid rgba(248, 113, 113, 0.24);
+          border-radius: 8px;
+          background: rgba(239, 68, 68, 0.08);
+          color: #fecaca;
+          font: inherit;
+          font-size: 8px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
         .success-actions {
           justify-content: flex-end;
         }
@@ -1710,21 +2251,26 @@ export default function ScannerPage() {
 
         .session-item {
           min-width: 0;
-          display: grid;
-          grid-template-columns: auto minmax(0, 1fr) auto auto;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 13px;
           border: 1px solid rgba(148, 163, 184, 0.09);
           border-radius: 13px;
           background: rgba(0, 0, 0, 0.11);
-          color: inherit;
-          text-decoration: none;
+          overflow: hidden;
         }
 
         .session-item:hover {
           border-color: rgba(167, 139, 250, 0.26);
           background: rgba(124, 92, 255, 0.045);
+        }
+
+        .session-card-link {
+          min-width: 0;
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto auto;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 13px;
+          color: inherit;
+          text-decoration: none;
         }
 
         .session-number {
@@ -1739,12 +2285,12 @@ export default function ScannerPage() {
           font-weight: 800;
         }
 
-        .session-item strong {
+        .session-card-link strong {
           color: #d7dbe4;
           font-size: 11px;
         }
 
-        .session-item p {
+        .session-card-link p {
           margin: 4px 0 0;
           color: #697183;
           font-size: 9px;
@@ -1757,6 +2303,38 @@ export default function ScannerPage() {
 
         .session-arrow {
           color: #9f93ff;
+        }
+
+        .session-inventory {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          border-top: 1px solid rgba(148, 163, 184, 0.07);
+          background: rgba(20, 184, 166, 0.03);
+          color: #79cbbb;
+        }
+
+        .session-inventory > span {
+          font-size: 9px;
+          font-weight: 850;
+        }
+
+        .session-inventory p {
+          margin: 0;
+          color: inherit;
+          font-size: 8px;
+          line-height: 1.4;
+        }
+
+        .session-inventory-failed {
+          background: rgba(239, 68, 68, 0.045);
+          color: #e5a5a5;
+        }
+
+        .session-inventory-adding {
+          color: #c4b5fd;
         }
 
         .destination-options {
@@ -2012,6 +2590,10 @@ export default function ScannerPage() {
           .destination-panel {
             grid-column: 1 / -1;
           }
+
+          :global(.rapid-intake-panel) {
+            grid-column: 1 / -1;
+          }
         }
 
         @media (max-width: 760px) {
@@ -2030,6 +2612,15 @@ export default function ScannerPage() {
 
           .scanner-metrics {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .inventory-sync {
+            grid-template-columns: auto minmax(0, 1fr);
+          }
+
+          .inventory-sync button {
+            grid-column: 1 / -1;
+            width: 100%;
           }
 
           .scanner-layout {
@@ -2190,7 +2781,7 @@ export default function ScannerPage() {
             grid-column: auto;
           }
 
-          .session-item {
+          .session-card-link {
             grid-template-columns: auto minmax(0, 1fr) auto;
           }
 

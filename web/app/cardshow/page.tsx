@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -9,8 +11,16 @@ import {
 } from "react";
 
 import CreateCardshowEventModal from "@/components/cardshow/CreateCardshowEventModal";
+import CardshowInventoryManager from "@/components/cardshow/CardshowInventoryManager";
 import type { CreateCardshowEventResult } from "@/lib/cardshow/createCardshowEvent";
+import type { CreatePurchaseLotResult } from "@/lib/cardshow/createPurchaseLot";
+import { lockPurchaseLot } from "@/lib/cardshow/lockPurchaseLot";
+import type { UpsertCardshowInventoryResult } from "@/lib/cardshow/upsertCardshowInventory";
 import { createClient } from "@/lib/supabase/client";
+
+const CreatePurchaseLotModal = dynamic(
+  () => import("@/components/cardshow/CreatePurchaseLotModal")
+);
 
 type NumericDatabaseValue = number | string | null;
 type CardshowEventStatus = "planning" | "active" | "closed" | "cancelled";
@@ -60,11 +70,44 @@ type PurchaseLotRow = {
   allocation_method: string;
   source: string | null;
   seller: string | null;
+  purchase_reference: string | null;
   purchased_at: string;
   currency: string;
   total_cost: NumericDatabaseValue;
   allocated_total: NumericDatabaseValue;
+  allocated_at: string | null;
+  locked_at: string | null;
   created_at: string;
+};
+
+type PurchaseLotCardRow = {
+  lot_id: string;
+  card_id: string;
+  position: number;
+  reference_source: string;
+  reference_value: NumericDatabaseValue;
+  allocated_cost: NumericDatabaseValue;
+  previous_purchase_price: NumericDatabaseValue;
+  cost_locked_at: string | null;
+};
+
+type PurchaseLotCardLookupRow = {
+  id: string;
+  player_name: string;
+  year: string | null;
+  manufacturer: string | null;
+  set_name: string | null;
+  card_number: string | null;
+  parallel_name: string | null;
+};
+
+type PurchaseLotCardSummary = PurchaseLotCardRow & {
+  playerName: string;
+  description: string;
+};
+
+type PurchaseLotSummary = PurchaseLotRow & {
+  cards: PurchaseLotCardSummary[];
 };
 
 type EventSummary = CardshowEventRow & {
@@ -212,6 +255,49 @@ function getPaymentMethodLabel(method: string) {
   }
 }
 
+function getPurchaseLotStatusLabel(status: PurchaseLotStatus) {
+  switch (status) {
+    case "draft":
+      return "Draft";
+    case "allocated":
+      return "Ready to lock";
+    case "locked":
+      return "Cost basis locked";
+    case "cancelled":
+      return "Cancelled";
+  }
+}
+
+function getAllocationMethodLabel(method: string) {
+  switch (method) {
+    case "proportional":
+      return "Proportional";
+    case "equal":
+      return "Equal";
+    case "manual":
+      return "Manual";
+    default:
+      return method;
+  }
+}
+
+function getReferenceSourceLabel(source: string) {
+  switch (source) {
+    case "market":
+      return "Market";
+    case "asking":
+      return "Cardshow asking";
+    case "manual":
+      return "Manual allocation";
+    case "override":
+      return "Reference override";
+    case "equal":
+      return "Equal split";
+    default:
+      return source;
+  }
+}
+
 function normalizeSearch(value: string) {
   return value
     .toLowerCase()
@@ -221,13 +307,23 @@ function normalizeSearch(value: string) {
 }
 
 export default function CardshowCenterPage() {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [events, setEvents] = useState<EventSummary[]>([]);
-  const [purchaseLots, setPurchaseLots] = useState<PurchaseLotRow[]>([]);
+  const [purchaseLots, setPurchaseLots] = useState<PurchaseLotSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [showCreatePurchaseLot, setShowCreatePurchaseLot] = useState(false);
+  const [inventoryEvent, setInventoryEvent] = useState<EventSummary | null>(null);
+  const [lockingLotId, setLockingLotId] = useState<string | null>(null);
+  const [expandedLotIds, setExpandedLotIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [overwriteCostLotIds, setOverwriteCostLotIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [expandedEventIds, setExpandedEventIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -245,7 +341,7 @@ export default function CardshowCenterPage() {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      window.location.href = "/login";
+      router.replace("/login");
       return;
     }
 
@@ -300,10 +396,13 @@ export default function CardshowCenterPage() {
           allocation_method,
           source,
           seller,
+          purchase_reference,
           purchased_at,
           currency,
           total_cost,
           allocated_total,
+          allocated_at,
+          locked_at,
           created_at
         `)
         .eq("user_id", user.id)
@@ -327,6 +426,8 @@ export default function CardshowCenterPage() {
     const lotRows = lotResult.error
       ? []
       : ((lotResult.data ?? []) as PurchaseLotRow[]);
+    let lotCardRows: PurchaseLotCardRow[] = [];
+    let lotCardLookupRows: PurchaseLotCardLookupRow[] = [];
 
     if (inventoryResult.error) {
       warnings.push("Cardshow inventory totals could not be loaded.");
@@ -334,6 +435,59 @@ export default function CardshowCenterPage() {
 
     if (lotResult.error) {
       warnings.push("Purchase lots could not be loaded.");
+    } else if (lotRows.length > 0) {
+      const lotCardResult = await supabase
+        .from("purchase_lot_cards")
+        .select(`
+          lot_id,
+          card_id,
+          position,
+          reference_source,
+          reference_value,
+          allocated_cost,
+          previous_purchase_price,
+          cost_locked_at
+        `)
+        .eq("user_id", user.id)
+        .in(
+          "lot_id",
+          lotRows.map((lot) => lot.id)
+        )
+        .order("position", { ascending: true })
+        .limit(5000);
+
+      if (lotCardResult.error) {
+        warnings.push("Purchase-lot allocations could not be loaded.");
+      } else {
+        lotCardRows = (lotCardResult.data ?? []) as PurchaseLotCardRow[];
+        const cardIds = Array.from(
+          new Set(lotCardRows.map((lotCard) => lotCard.card_id))
+        );
+
+        if (cardIds.length > 0) {
+          const lotCardLookupResult = await supabase
+            .from("cards")
+            .select(`
+              id,
+              player_name,
+              year,
+              manufacturer,
+              set_name,
+              card_number,
+              parallel_name
+            `)
+            .eq("user_id", user.id)
+            .in("id", cardIds)
+            .limit(5000);
+
+          if (lotCardLookupResult.error) {
+            warnings.push("Some purchase-lot card names could not be loaded.");
+          } else {
+            lotCardLookupRows =
+              (lotCardLookupResult.data ?? []) as PurchaseLotCardLookupRow[];
+          }
+        }
+      }
     }
 
     const inventoryByEventId = new Map<string, InventoryRow[]>();
@@ -376,15 +530,48 @@ export default function CardshowCenterPage() {
       };
     });
 
+    const cardLookupById = new Map(
+      lotCardLookupRows.map((card) => [card.id, card])
+    );
+    const lotCardsByLotId = new Map<string, PurchaseLotCardSummary[]>();
+
+    for (const lotCard of lotCardRows) {
+      const card = cardLookupById.get(lotCard.card_id);
+      const description = card
+        ? [
+            card.year,
+            card.manufacturer,
+            card.set_name,
+            card.parallel_name,
+            card.card_number ? `#${card.card_number}` : null,
+          ]
+            .filter((value): value is string => Boolean(value?.trim()))
+            .join(" · ")
+        : "Card details unavailable";
+      const currentCards = lotCardsByLotId.get(lotCard.lot_id) ?? [];
+
+      currentCards.push({
+        ...lotCard,
+        playerName: card?.player_name ?? "Unknown card",
+        description,
+      });
+      lotCardsByLotId.set(lotCard.lot_id, currentCards);
+    }
+
+    const nextPurchaseLots = lotRows.map<PurchaseLotSummary>((lot) => ({
+      ...lot,
+      cards: lotCardsByLotId.get(lot.id) ?? [],
+    }));
+
     setEvents(nextEvents);
-    setPurchaseLots(lotRows);
+    setPurchaseLots(nextPurchaseLots);
 
     if (warnings.length > 0) {
       setMessage(warnings.join(" "));
     }
 
     setLoading(false);
-  }, [supabase]);
+  }, [router, supabase]);
 
   useEffect(() => {
     void loadCardshowCenter();
@@ -401,9 +588,61 @@ export default function CardshowCenterPage() {
     });
   }
 
+  async function handleInventorySaved(
+    result: UpsertCardshowInventoryResult
+  ) {
+    setInventoryEvent(null);
+    await loadCardshowCenter();
+    setMessage(result.message);
+    setExpandedEventIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      nextIds.add(result.eventId);
+      return nextIds;
+    });
+  }
+
+  async function handlePurchaseLotCreated(result: CreatePurchaseLotResult) {
+    setShowCreatePurchaseLot(false);
+    await loadCardshowCenter();
+    setMessage(result.message);
+    setExpandedLotIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      nextIds.add(result.lotId);
+      return nextIds;
+    });
+  }
+
+  async function handleLockPurchaseLot(lot: PurchaseLotSummary) {
+    setLockingLotId(lot.id);
+    setMessage("");
+
+    try {
+      const result = await lockPurchaseLot({
+        lotId: lot.id,
+        overwriteExistingPurchasePrice: overwriteCostLotIds.has(lot.id),
+      });
+
+      await loadCardshowCenter();
+      setMessage(result.message);
+      setExpandedLotIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.add(lot.id);
+        return nextIds;
+      });
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `Purchase lot could not be locked: ${error.message}`
+          : "Purchase lot could not be locked."
+      );
+    } finally {
+      setLockingLotId(null);
+    }
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.replace("/login");
   }
 
   function toggleEvent(eventId: string) {
@@ -414,6 +653,34 @@ export default function CardshowCenterPage() {
         nextIds.delete(eventId);
       } else {
         nextIds.add(eventId);
+      }
+
+      return nextIds;
+    });
+  }
+
+  function togglePurchaseLot(lotId: string) {
+    setExpandedLotIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(lotId)) {
+        nextIds.delete(lotId);
+      } else {
+        nextIds.add(lotId);
+      }
+
+      return nextIds;
+    });
+  }
+
+  function toggleOverwriteCost(lotId: string) {
+    setOverwriteCostLotIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(lotId)) {
+        nextIds.delete(lotId);
+      } else {
+        nextIds.add(lotId);
       }
 
       return nextIds;
@@ -483,8 +750,11 @@ export default function CardshowCenterPage() {
     .filter((event) => event.currency === primaryCurrency)
     .reduce((total, event) => total + event.eventCostTotal, 0);
   const lockedLots = purchaseLots.filter((lot) => lot.status === "locked");
+  const primaryLotCurrency = purchaseLots[0]?.currency ?? primaryCurrency;
+  const mixedLotCurrencies =
+    new Set(purchaseLots.map((lot) => lot.currency)).size > 1;
   const lockedLotCost = lockedLots
-    .filter((lot) => lot.currency === primaryCurrency)
+    .filter((lot) => lot.currency === primaryLotCurrency)
     .reduce((total, lot) => total + toNumber(lot.total_cost), 0);
 
   return (
@@ -636,15 +906,15 @@ export default function CardshowCenterPage() {
             <p className="eyebrow">Two-week sprint</p>
             <h2>Cardshow readiness</h2>
             <p>
-              Event setup is live. Inventory preparation, purchase-lot allocation
-              and multi-card checkout are the next operational layers.
+              Event setup, inventory management and purchase-lot allocation are
+              live. Rapid intake and multi-card checkout are next.
             </p>
           </div>
 
           <div className="readiness-steps">
             <ReadinessStep number="1" title="Event" status="Ready" active />
-            <ReadinessStep number="2" title="Inventory" status="Next" />
-            <ReadinessStep number="3" title="Rapid intake" status="Planned" />
+            <ReadinessStep number="2" title="Inventory" status="Live" active />
+            <ReadinessStep number="3" title="Rapid intake" status="Next" />
             <ReadinessStep number="4" title="Checkout" status="Planned" />
             <ReadinessStep number="5" title="Deploy" status="Planned" />
           </div>
@@ -656,8 +926,8 @@ export default function CardshowCenterPage() {
               <p className="eyebrow">Event operations</p>
               <h2>Cardshows</h2>
               <p>
-                Create events now. Inventory, pricing and checkout actions will
-                attach to these event records.
+                Create events, add cards in bulk, assign show prices and keep
+                every physical box or showcase location searchable.
               </p>
             </div>
             <span className="result-count">
@@ -770,6 +1040,17 @@ export default function CardshowCenterPage() {
                       </div>
 
                       <div className="event-actions">
+                        {["planning", "active"].includes(event.status) && (
+                          <button
+                            className="manage-inventory-button"
+                            type="button"
+                            onClick={() => setInventoryEvent(event)}
+                          >
+                            Manage inventory
+                            <span>▱</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => toggleEvent(event.id)}
@@ -848,15 +1129,19 @@ export default function CardshowCenterPage() {
 
                         <div className="next-actions">
                           <div>
-                            <strong>Inventory management is next</strong>
+                            <strong>Inventory manager is live</strong>
                             <p>
-                              The next sprint adds bulk card selection, asking and
-                              floor prices, price groups and physical locations.
+                              Select up to 5,000 cards, apply asking and floor
+                              prices, use price groups and assign physical locations.
                             </p>
                           </div>
-                          <button type="button" disabled>
+                          <button
+                            type="button"
+                            onClick={() => setInventoryEvent(event)}
+                            disabled={!["planning", "active"].includes(event.status)}
+                          >
                             Manage inventory
-                            <span>Next</span>
+                            <span>Open</span>
                           </button>
                         </div>
                       </div>
@@ -874,8 +1159,8 @@ export default function CardshowCenterPage() {
               <p className="eyebrow">Acquisition accounting</p>
               <h2>Purchase lots</h2>
               <p>
-                Lots will distribute total acquisition cost across individual
-                cards before sales are recorded.
+                Distribute total acquisition cost across individual cards before
+                sales are recorded.
               </p>
             </div>
             <span className="result-count">{purchaseLots.length} recent</span>
@@ -891,26 +1176,207 @@ export default function CardshowCenterPage() {
             <MetricCard
               label="Locked cost"
               value={
-                mixedCurrencies
+                mixedLotCurrencies
                   ? "Mixed"
-                  : formatCurrency(lockedLotCost, primaryCurrency)
+                  : formatCurrency(lockedLotCost, primaryLotCurrency)
               }
               caption="recent locked acquisition lots"
               icon="↘"
             />
             <article className="lot-next-card">
-              <span>PURCHASE LOTS</span>
-              <strong>Create and allocate lots next</strong>
+              <span>PURCHASE LOT CREATOR</span>
+              <strong>Turn a bulk purchase into precise card costs</strong>
               <p>
-                Proportional, equal and manual allocation services are ready. The
-                next UI will let you select cards and preview every allocated cost.
+                Select cards, include every fee and preview proportional, equal
+                or manual allocations before cost basis is locked.
               </p>
-              <button type="button" disabled>
+              <button
+                data-testid="open-purchase-lot"
+                onClick={() => setShowCreatePurchaseLot(true)}
+                type="button"
+              >
                 Create purchase lot
-                <small>Next sprint</small>
+                <small>Open</small>
               </button>
             </article>
           </div>
+
+          {purchaseLots.length > 0 && (
+            <div className="purchase-lot-list">
+              {purchaseLots.map((lot) => {
+                const isExpanded = expandedLotIds.has(lot.id);
+                const hasDifferentExistingCosts = lot.cards.some((card) => {
+                  const previousCost = toNumber(card.previous_purchase_price);
+                  const allocatedCost = toNumber(card.allocated_cost);
+                  return (
+                    previousCost > 0 &&
+                    Math.abs(previousCost - allocatedCost) >= 0.005
+                  );
+                });
+
+                return (
+                  <article className="purchase-lot-card" key={lot.id}>
+                    <div className="purchase-lot-summary">
+                      <div className={`lot-status-mark lot-${lot.status}`}>
+                        {lot.status === "locked" ? "✓" : "LOT"}
+                      </div>
+                      <div className="purchase-lot-copy">
+                        <div className="purchase-lot-title">
+                          <h3>{lot.name}</h3>
+                          <span className={`lot-status lot-status-${lot.status}`}>
+                            {getPurchaseLotStatusLabel(lot.status)}
+                          </span>
+                        </div>
+                        <p>
+                          {[lot.source, lot.seller]
+                            .filter(Boolean)
+                            .join(" · ") || "Source not specified"}
+                        </p>
+                        <div className="purchase-lot-meta">
+                          <span>{formatDate(lot.purchased_at)}</span>
+                          <span>{getAllocationMethodLabel(lot.allocation_method)}</span>
+                          <span>{lot.cards.length} cards</span>
+                          {lot.purchase_reference && (
+                            <span>Ref. {lot.purchase_reference}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="purchase-lot-total">
+                        <small>Total cost</small>
+                        <strong>
+                          {formatCurrency(toNumber(lot.total_cost), lot.currency)}
+                        </strong>
+                        <span>
+                          Allocated {formatCurrency(toNumber(lot.allocated_total), lot.currency)}
+                        </span>
+                      </div>
+                      <button
+                        className="lot-details-button"
+                        onClick={() => togglePurchaseLot(lot.id)}
+                        type="button"
+                      >
+                        {isExpanded ? "Hide" : "Review"}
+                        <span>{isExpanded ? "↑" : "↓"}</span>
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="purchase-lot-details">
+                        <div className="lot-allocation-head">
+                          <span>Card</span>
+                          <span>Reference</span>
+                          <span>Previous cost</span>
+                          <span>Allocated cost</span>
+                        </div>
+                        {lot.cards.map((card) => (
+                          <div className="lot-allocation-row" key={card.card_id}>
+                            <span className="lot-card-copy">
+                              <strong>{card.playerName}</strong>
+                              <small>{card.description}</small>
+                            </span>
+                            <span>
+                              <small>{getReferenceSourceLabel(card.reference_source)}</small>
+                              <strong>
+                                {card.reference_value === null
+                                  ? "—"
+                                  : formatCurrency(
+                                      toNumber(card.reference_value),
+                                      lot.currency
+                                    )}
+                              </strong>
+                            </span>
+                            <span>
+                              <small>Before allocation</small>
+                              <strong>
+                                {card.previous_purchase_price === null
+                                  ? "—"
+                                  : formatCurrency(
+                                      toNumber(card.previous_purchase_price),
+                                      lot.currency
+                                    )}
+                              </strong>
+                            </span>
+                            <span className="lot-allocated-cost">
+                              <small>
+                                {card.cost_locked_at ? "Locked" : "Ready"}
+                              </small>
+                              <strong>
+                                {formatCurrency(
+                                  toNumber(card.allocated_cost),
+                                  lot.currency
+                                )}
+                              </strong>
+                            </span>
+                          </div>
+                        ))}
+
+                        {lot.cards.length === 0 && (
+                          <p className="lot-detail-warning">
+                            Allocation details could not be loaded for this lot.
+                          </p>
+                        )}
+
+                        <div className="lot-lock-panel">
+                          {lot.status === "allocated" ? (
+                            <>
+                              <div>
+                                <strong>Ready to transfer cost basis</strong>
+                                <p>
+                                  Locking writes each allocated amount to the card’s
+                                  purchase price. The allocation itself cannot be
+                                  changed afterwards.
+                                </p>
+                                {hasDifferentExistingCosts && (
+                                  <label className="overwrite-cost-option">
+                                    <input
+                                      checked={overwriteCostLotIds.has(lot.id)}
+                                      onChange={() => toggleOverwriteCost(lot.id)}
+                                      type="checkbox"
+                                    />
+                                    <span>
+                                      Overwrite existing card costs that differ from
+                                      this allocation
+                                    </span>
+                                  </label>
+                                )}
+                              </div>
+                              <button
+                                className="lock-lot-button"
+                                data-testid={`lock-purchase-lot-${lot.id}`}
+                                disabled={
+                                  lockingLotId === lot.id || lot.cards.length === 0
+                                }
+                                onClick={() => void handleLockPurchaseLot(lot)}
+                                type="button"
+                              >
+                                {lockingLotId === lot.id
+                                  ? "Locking cost basis…"
+                                  : "Lock cost basis"}
+                                <span>✓</span>
+                              </button>
+                            </>
+                          ) : lot.status === "locked" ? (
+                            <div className="locked-confirmation">
+                              <span>✓</span>
+                              <div>
+                                <strong>Cost basis is locked</strong>
+                                <p>
+                                  The allocated acquisition costs have been
+                                  transferred to all {lot.cards.length} cards.
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <p>This lot cannot currently be locked.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
       </main>
 
@@ -921,6 +1387,28 @@ export default function CardshowCenterPage() {
           void handleCreated(result);
         }}
       />
+
+      <CreatePurchaseLotModal
+        isOpen={showCreatePurchaseLot}
+        onClose={() => setShowCreatePurchaseLot(false)}
+        onCreated={(result) => {
+          void handlePurchaseLotCreated(result);
+        }}
+      />
+
+      {inventoryEvent && (
+        <CardshowInventoryManager
+          isOpen
+          eventId={inventoryEvent.id}
+          eventName={inventoryEvent.name}
+          eventCurrency={inventoryEvent.currency}
+          eventStatus={inventoryEvent.status}
+          onClose={() => setInventoryEvent(null)}
+          onSaved={(result) => {
+            void handleInventorySaved(result);
+          }}
+        />
+      )}
 
       <style jsx>{`
         :global(*) {
@@ -952,7 +1440,9 @@ export default function CardshowCenterPage() {
 
         .sidebar {
           position: sticky;
+          inset: auto;
           top: 0;
+          width: 100%;
           height: 100vh;
           display: flex;
           flex-direction: column;
@@ -1144,6 +1634,7 @@ export default function CardshowCenterPage() {
 
         .main-content {
           min-width: 0;
+          margin-left: 0;
           padding: 50px 50px 70px;
         }
 
@@ -1511,6 +2002,14 @@ export default function CardshowCenterPage() {
           font-weight: 700;
         }
 
+        .event-actions {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 7px;
+        }
+
         .event-actions button {
           min-height: 38px;
           display: inline-flex;
@@ -1524,6 +2023,12 @@ export default function CardshowCenterPage() {
           font-size: 9px;
           font-weight: 750;
           cursor: pointer;
+        }
+
+        .event-actions .manage-inventory-button {
+          border-color: rgba(167, 139, 250, 0.25);
+          background: rgba(124, 92, 255, 0.08);
+          color: #d8d1ff;
         }
 
         .event-metrics {
@@ -1590,8 +2095,16 @@ export default function CardshowCenterPage() {
           border: 1px solid rgba(167, 139, 250, 0.18);
           border-radius: 10px;
           background: rgba(124, 92, 255, 0.06);
-          color: #968fac;
+          color: #c9c1ff;
           font-size: 9px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .next-actions button:hover:not(:disabled) {
+          border-color: rgba(167, 139, 250, 0.38);
+          background: rgba(124, 92, 255, 0.11);
+          color: #ffffff;
         }
 
         .next-actions button span {
@@ -1648,8 +2161,16 @@ export default function CardshowCenterPage() {
           border: 1px solid rgba(167, 139, 250, 0.17);
           border-radius: 10px;
           background: rgba(124, 92, 255, 0.06);
-          color: #9189a9;
+          color: #d5ceff;
           font-size: 9px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .lot-next-card button:hover {
+          border-color: rgba(167, 139, 250, 0.4);
+          background: rgba(124, 92, 255, 0.12);
+          color: #ffffff;
         }
 
         .lot-next-card small {
@@ -1657,6 +2178,272 @@ export default function CardshowCenterPage() {
           border-radius: 5px;
           background: rgba(255, 255, 255, 0.04);
           font-size: 7px;
+        }
+
+        .purchase-lot-list {
+          display: grid;
+          gap: 10px;
+          margin-top: 18px;
+        }
+
+        .purchase-lot-card {
+          overflow: hidden;
+          border: 1px solid rgba(148, 163, 184, 0.11);
+          border-radius: 18px;
+          background: rgba(8, 11, 18, 0.65);
+        }
+
+        .purchase-lot-summary {
+          display: grid;
+          grid-template-columns: auto minmax(240px, 1fr) minmax(150px, auto) auto;
+          align-items: center;
+          gap: 16px;
+          padding: 16px 18px;
+        }
+
+        .lot-status-mark {
+          width: 44px;
+          height: 44px;
+          display: grid;
+          place-items: center;
+          border-radius: 13px;
+          background: rgba(124, 92, 255, 0.1);
+          color: #9d8aff;
+          font-size: 9px;
+          font-weight: 900;
+        }
+
+        .lot-status-mark.lot-locked {
+          background: rgba(35, 220, 171, 0.1);
+          color: #5ed8b3;
+          font-size: 15px;
+        }
+
+        .purchase-lot-copy,
+        .purchase-lot-total {
+          min-width: 0;
+        }
+
+        .purchase-lot-title {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 9px;
+        }
+
+        .purchase-lot-title h3,
+        .purchase-lot-copy p,
+        .lot-lock-panel p,
+        .locked-confirmation p {
+          margin: 0;
+        }
+
+        .purchase-lot-title h3 {
+          overflow: hidden;
+          color: #ffffff;
+          font-size: 13px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .lot-status {
+          padding: 4px 7px;
+          border-radius: 6px;
+          background: rgba(148, 163, 184, 0.08);
+          color: #939cad;
+          font-size: 7px;
+          font-weight: 850;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .lot-status-allocated {
+          background: rgba(245, 158, 11, 0.09);
+          color: #e6b56a;
+        }
+
+        .lot-status-locked {
+          background: rgba(35, 220, 171, 0.09);
+          color: #62d7b4;
+        }
+
+        .purchase-lot-copy > p {
+          margin-top: 5px;
+          color: #737d90;
+          font-size: 9px;
+        }
+
+        .purchase-lot-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px 12px;
+          margin-top: 8px;
+          color: #687287;
+          font-size: 8px;
+        }
+
+        .purchase-lot-total {
+          display: grid;
+          gap: 3px;
+          text-align: right;
+        }
+
+        .purchase-lot-total small,
+        .purchase-lot-total span {
+          color: #687287;
+          font-size: 8px;
+        }
+
+        .purchase-lot-total strong {
+          color: #b4a3ff;
+          font-size: 15px;
+        }
+
+        .lot-details-button {
+          min-height: 36px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 0 11px;
+          border: 1px solid rgba(148, 163, 184, 0.13);
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.025);
+          color: #aeb6c7;
+          font-size: 9px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .purchase-lot-details {
+          border-top: 1px solid rgba(148, 163, 184, 0.09);
+          background: rgba(3, 5, 10, 0.25);
+        }
+
+        .lot-allocation-head,
+        .lot-allocation-row {
+          display: grid;
+          grid-template-columns: minmax(240px, 1.4fr) repeat(3, minmax(115px, 0.6fr));
+          align-items: center;
+          gap: 14px;
+          padding: 11px 18px;
+        }
+
+        .lot-allocation-head {
+          border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+          color: #5f697d;
+          font-size: 7px;
+          font-weight: 850;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .lot-allocation-row {
+          min-height: 57px;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+        }
+
+        .lot-allocation-row > span {
+          min-width: 0;
+          display: grid;
+          gap: 3px;
+        }
+
+        .lot-allocation-row strong {
+          overflow: hidden;
+          color: #dfe3eb;
+          font-size: 9px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .lot-allocation-row small {
+          overflow: hidden;
+          color: #6b7589;
+          font-size: 7px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .lot-allocated-cost strong {
+          color: #b4a3ff;
+        }
+
+        .lot-lock-panel {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 22px;
+          padding: 16px 18px;
+          background: rgba(124, 92, 255, 0.035);
+        }
+
+        .lot-lock-panel > div > strong,
+        .locked-confirmation strong {
+          color: #f3f4f7;
+          font-size: 10px;
+        }
+
+        .lot-lock-panel p,
+        .locked-confirmation p {
+          margin-top: 4px;
+          color: #727c8f;
+          font-size: 8px;
+          line-height: 1.5;
+        }
+
+        .overwrite-cost-option {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 10px;
+          color: #d2af79;
+          font-size: 8px;
+          cursor: pointer;
+        }
+
+        .overwrite-cost-option input {
+          width: 14px;
+          height: 14px;
+          accent-color: #8b6dff;
+        }
+
+        .lock-lot-button {
+          flex: 0 0 auto;
+          min-height: 40px;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 0 14px;
+          border: 1px solid rgba(35, 220, 171, 0.22);
+          border-radius: 11px;
+          background: rgba(35, 220, 171, 0.08);
+          color: #8de5c9;
+          font-size: 9px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .locked-confirmation {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+        }
+
+        .locked-confirmation > span {
+          width: 29px;
+          height: 29px;
+          display: grid;
+          place-items: center;
+          border-radius: 9px;
+          background: rgba(35, 220, 171, 0.1);
+          color: #5ed8b3;
+        }
+
+        .lot-detail-warning {
+          margin: 0;
+          padding: 18px;
+          color: #d5a471;
+          font-size: 9px;
         }
 
         @keyframes spin {
@@ -1796,6 +2583,46 @@ export default function CardshowCenterPage() {
           }
 
           .next-actions button {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .purchase-lot-summary {
+            grid-template-columns: auto minmax(0, 1fr);
+          }
+
+          .purchase-lot-total {
+            grid-column: 2;
+            text-align: left;
+          }
+
+          .lot-details-button {
+            grid-column: 2;
+            width: 100%;
+            justify-content: center;
+          }
+
+          .lot-allocation-head {
+            display: none;
+          }
+
+          .lot-allocation-row {
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding-top: 14px;
+            padding-bottom: 14px;
+          }
+
+          .lot-card-copy {
+            grid-column: 1 / -1;
+          }
+
+          .lot-lock-panel {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .lock-lot-button {
             width: 100%;
             justify-content: center;
           }

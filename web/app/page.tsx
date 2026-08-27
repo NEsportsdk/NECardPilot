@@ -373,7 +373,7 @@ export default function HomePage() {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      window.location.href = "/login";
+      router.replace("/login");
       return;
     }
 
@@ -541,7 +541,7 @@ export default function HomePage() {
     }
 
     setLoading(false);
-  }, [supabase]);
+  }, [router, supabase]);
 
   useEffect(() => {
     void loadDashboard();
@@ -594,7 +594,7 @@ export default function HomePage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.replace("/login");
   }
 
   function handleScanCard() {
@@ -828,9 +828,16 @@ export default function HomePage() {
     )
     .slice(0, RECENT_CARD_LIMIT);
 
-  const cardById = new Map(cards.map((card) => [card.id, card]));
-  const collectionById = new Map(
-    collections.map((collection) => [collection.id, collection])
+  const cardById = useMemo(
+    () => new Map(cards.map((card) => [card.id, card])),
+    [cards]
+  );
+  const collectionById = useMemo(
+    () =>
+      new Map(
+        collections.map((collection) => [collection.id, collection])
+      ),
+    [collections]
   );
 
   const recentActivity = useMemo<ActivityItem[]>(() => {

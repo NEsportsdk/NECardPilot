@@ -19,7 +19,7 @@ import {
 } from "@/lib/scan/identifyCard";
 
 import type {
-  SaveIdentifiedCardResult,
+  ReviewedCardSaveResult,
 } from "@/lib/scan/saveIdentifiedCard";
 
 import {
@@ -37,7 +37,9 @@ type ScanCardModalProps = {
   collectionId: string;
   onClose: () => void;
   onUploadComplete?: (result: UploadCardImagesResult) => void;
-  onCardSaved?: (result: SaveIdentifiedCardResult) => void;
+  onCardSaved?: (
+    result: ReviewedCardSaveResult
+  ) => void | Promise<void>;
 
   /**
    * Collection pages keep the original behaviour and reload after save.
@@ -168,8 +170,8 @@ export default function ScanCardModal({
   }, [resetModal]);
 
   const handleCardSaved = useCallback(
-    (result: SaveIdentifiedCardResult) => {
-      onCardSaved?.(result);
+    async (result: ReviewedCardSaveResult) => {
+      await onCardSaved?.(result);
 
       resetModal();
       onClose();

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type FormEvent,
   useEffect,
@@ -36,6 +37,7 @@ function requiresReauthentication(message: string) {
 }
 
 export default function ChangePasswordPage() {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [email, setEmail] = useState("");
@@ -63,7 +65,7 @@ export default function ChangePasswordPage() {
       }
 
       if (error || !user) {
-        window.location.href = "/login";
+        router.replace("/login");
         return;
       }
 
@@ -76,7 +78,7 @@ export default function ChangePasswordPage() {
     return () => {
       isMounted = false;
     };
-  }, [supabase]);
+  }, [router, supabase]);
 
   async function sendReauthenticationCode() {
     setIsSendingCode(true);
