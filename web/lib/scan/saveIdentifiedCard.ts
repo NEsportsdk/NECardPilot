@@ -36,6 +36,8 @@ export type SaveIdentifiedCardInput = {
     | null;
 
   editedFields?: string[];
+
+  allowDuplicate?: boolean;
 };
 
 export type SaveIdentifiedCardResult = {
@@ -52,6 +54,8 @@ export type ReviewedCardSaveResult = SaveIdentifiedCardResult & {
   playerName: string;
 
   estimatedValue: number | null;
+
+  nextAction: "continue" | "value";
 };
 
 type ErrorResponse = {
@@ -233,6 +237,7 @@ export async function saveIdentifiedCard({
   purchaseSource,
   userNotes,
   editedFields,
+  allowDuplicate = false,
 }: SaveIdentifiedCardInput): Promise<SaveIdentifiedCardResult> {
   const normalizedCollectionId =
     getRequiredText(
@@ -312,6 +317,8 @@ export async function saveIdentifiedCard({
           normalizeEditedFields(
             editedFields
           ),
+
+        allowDuplicate,
       }),
     }
   );

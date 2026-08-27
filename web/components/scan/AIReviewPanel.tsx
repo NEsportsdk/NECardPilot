@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   FormEvent,
   useEffect,
@@ -7,6 +8,12 @@ import {
   useState,
 } from "react";
 
+import { checkDuplicateCards } from "@/lib/cards/checkDuplicateCards";
+import {
+  hasDuplicateCheckIdentity,
+  type DuplicateCardCheckResult,
+  type DuplicateCardIdentity,
+} from "@/lib/cards/duplicateCards";
 import type {
   IdentifiedCard,
 } from "@/lib/scan/identifyCard";
@@ -409,6 +416,63 @@ export default function AIReviewPanel({
     null
   );
 
+  const [
+    duplicateCheck,
+    setDuplicateCheck,
+  ] = useState<DuplicateCardCheckResult | null>(
+    null
+  );
+
+  const [
+    isCheckingDuplicates,
+    setIsCheckingDuplicates,
+  ] = useState(false);
+
+  const [
+    duplicateCheckError,
+    setDuplicateCheckError,
+  ] = useState<string | null>(null);
+
+  const [
+    duplicateAcknowledged,
+    setDuplicateAcknowledged,
+  ] = useState(false);
+
+  const duplicateIdentity =
+    useMemo<DuplicateCardIdentity>(
+      () => ({
+        playerName:
+          draftCard.playerName,
+        year: draftCard.year,
+        manufacturer:
+          draftCard.manufacturer,
+        brand: draftCard.brand,
+        product: draftCard.product,
+        setName: draftCard.setName,
+        cardNumber:
+          draftCard.cardNumber,
+        parallel: draftCard.parallel,
+        serialNumber:
+          draftCard.serialNumber,
+      }),
+      [
+        draftCard.brand,
+        draftCard.cardNumber,
+        draftCard.manufacturer,
+        draftCard.parallel,
+        draftCard.playerName,
+        draftCard.product,
+        draftCard.serialNumber,
+        draftCard.setName,
+        draftCard.year,
+      ]
+    );
+
+  const shouldCheckDuplicates =
+    hasDuplicateCheckIdentity(
+      duplicateIdentity
+    );
+
   useEffect(() => {
     setDraftCard(
       normalizeDraft(card)
@@ -425,9 +489,67 @@ export default function AIReviewPanel({
     setShowAdvanced(false);
     setIsSaving(false);
     setErrorMessage(null);
+    setDuplicateCheck(null);
+    setIsCheckingDuplicates(false);
+    setDuplicateCheckError(null);
+    setDuplicateAcknowledged(false);
   }, [
     card,
     uploadResult.scanId,
+  ]);
+
+  useEffect(() => {
+    setDuplicateAcknowledged(false);
+    setDuplicateCheckError(null);
+
+    if (!shouldCheckDuplicates) {
+      setDuplicateCheck(null);
+      setIsCheckingDuplicates(false);
+      return;
+    }
+
+    const controller =
+      new AbortController();
+
+    setDuplicateCheck(null);
+    setIsCheckingDuplicates(true);
+
+    const timeout = window.setTimeout(
+      () => {
+        void checkDuplicateCards(
+          duplicateIdentity,
+          controller.signal
+        )
+          .then((result) => {
+            if (!controller.signal.aborted) {
+              setDuplicateCheck(result);
+            }
+          })
+          .catch((error: unknown) => {
+            if (controller.signal.aborted) {
+              return;
+            }
+
+            setDuplicateCheckError(
+              getReadableError(error)
+            );
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) {
+              setIsCheckingDuplicates(false);
+            }
+          });
+      },
+      450
+    );
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [
+    duplicateIdentity,
+    shouldCheckDuplicates,
   ]);
 
   const confidencePercentage =
@@ -448,7 +570,13 @@ export default function AIReviewPanel({
     Boolean(
       draftCard.playerName?.trim()
     ) &&
-    !isSaving;
+    !isSaving &&
+    !isCheckingDuplicates &&
+    !(
+      duplicateCheck
+        ?.requiresAcknowledgement &&
+      !duplicateAcknowledged
+    );
 
   function markFieldEdited(
     fieldName: string
@@ -589,6 +717,18 @@ export default function AIReviewPanel({
 
     const playerName = draftCard.playerName?.trim();
 
+    const submitter = (
+      event.nativeEvent as SubmitEvent
+    ).submitter;
+
+    const nextAction =
+      submitter instanceof
+        HTMLButtonElement &&
+      submitter.dataset.action ===
+        "value"
+        ? "value"
+        : "continue";
+
     if (!playerName) {
       return;
     }
@@ -633,6 +773,9 @@ export default function AIReviewPanel({
             Array.from(
               editedFields
             ),
+
+          allowDuplicate:
+            duplicateAcknowledged,
         });
 
       await onSaved({
@@ -642,6 +785,7 @@ export default function AIReviewPanel({
           estimatedValue,
           "Den estimerede værdi"
         ),
+        nextAction,
       });
     } catch (error) {
       setErrorMessage(
@@ -1159,6 +1303,162 @@ export default function AIReviewPanel({
             )}
           </section>
 
+          <section
+            className={[
+              "duplicate-check-card",
+              duplicateCheck?.matches
+                .length
+                ? "duplicate-check-warning"
+                : "duplicate-check-clear",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-live="polite"
+          >
+            <div className="duplicate-check-heading">
+              <div>
+                <span className="review-eyebrow">
+                  COLLECTION CHECK
+                </span>
+
+                <h4>
+                  Duplicate protection
+                </h4>
+              </div>
+
+              {isCheckingDuplicates ? (
+                <span className="duplicate-status duplicate-status-loading">
+                  Checking…
+                </span>
+              ) : duplicateCheck?.matches
+                  .length ? (
+                <span className="duplicate-status duplicate-status-warning">
+                  {
+                    duplicateCheck.matches
+                      .length
+                  }{" "}
+                  match
+                  {duplicateCheck.matches
+                    .length === 1
+                    ? ""
+                    : "es"}
+                </span>
+              ) : (
+                <span className="duplicate-status duplicate-status-clear">
+                  Clear
+                </span>
+              )}
+            </div>
+
+            {isCheckingDuplicates ? (
+              <p className="duplicate-check-copy">
+                Vallective is comparing the
+                exact card identity with your
+                own library.
+              </p>
+            ) : duplicateCheckError ? (
+              <p className="duplicate-check-error">
+                {duplicateCheckError} The
+                server will run the protection
+                check again when you save.
+              </p>
+            ) : duplicateCheck &&
+              duplicateCheck.matches.length >
+                0 ? (
+              <>
+                <p className="duplicate-check-copy">
+                  This can be another physical
+                  copy. Review the matches so
+                  an accidental double entry
+                  does not slip into your
+                  collection.
+                </p>
+
+                <div className="duplicate-match-list">
+                  {duplicateCheck.matches.map(
+                    (match) => (
+                      <article
+                        className="duplicate-match"
+                        key={match.cardId}
+                      >
+                        <div>
+                          <strong>
+                            {[
+                              match.year,
+                              match.setName,
+                              match.playerName,
+                              match.cardNumber
+                                ? `#${match.cardNumber}`
+                                : null,
+                              match.parallel,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </strong>
+
+                          <p>
+                            {match.collectionName ??
+                              "Collection"}
+                            {match.serialNumber
+                              ? ` · ${match.serialNumber}`
+                              : ""}
+                          </p>
+
+                          <small>
+                            {match.reasons.join(
+                              " · "
+                            )}
+                          </small>
+                        </div>
+
+                        <div className="duplicate-match-action">
+                          <span>
+                            {match.score}%
+                          </span>
+
+                          <Link
+                            href={`/cards/${match.cardId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open
+                          </Link>
+                        </div>
+                      </article>
+                    )
+                  )}
+                </div>
+
+                {duplicateCheck.requiresAcknowledgement && (
+                  <label className="duplicate-confirmation">
+                    <input
+                      type="checkbox"
+                      checked={
+                        duplicateAcknowledged
+                      }
+                      onChange={(event) =>
+                        setDuplicateAcknowledged(
+                          event.target.checked
+                        )
+                      }
+                    />
+
+                    <span>
+                      I checked the matches.
+                      This is another physical
+                      copy and should be saved.
+                    </span>
+                  </label>
+                )}
+              </>
+            ) : (
+              <p className="duplicate-check-copy">
+                No matching copy was found in
+                your Vallective library.
+              </p>
+            )}
+          </section>
+
           <section className="review-card finance-card">
             <div className="review-section-heading">
               <div>
@@ -1348,7 +1648,7 @@ export default function AIReviewPanel({
           </button>
 
           <button
-            className="save-card-button"
+            className="save-only-button"
             type="submit"
             disabled={!canSave}
           >
@@ -1361,6 +1661,25 @@ export default function AIReviewPanel({
               <>
                 <span>✓</span>
                 Save card
+              </>
+            )}
+          </button>
+
+          <button
+            className="save-card-button"
+            type="submit"
+            data-action="value"
+            disabled={!canSave}
+          >
+            {isSaving ? (
+              <>
+                <span className="save-spinner" />
+                Saving card...
+              </>
+            ) : (
+              <>
+                <span>✦</span>
+                Save &amp; value
               </>
             )}
           </button>
@@ -1603,6 +1922,162 @@ export default function AIReviewPanel({
           margin: 8px 0 0;
         }
 
+        .duplicate-check-card {
+          padding: 18px;
+          border: 1px solid rgba(148, 163, 184, 0.12);
+          border-radius: 18px;
+          background: rgba(255, 255, 255, 0.025);
+        }
+
+        .duplicate-check-warning {
+          border-color: rgba(251, 191, 36, 0.26);
+          background:
+            radial-gradient(
+              circle at top right,
+              rgba(245, 158, 11, 0.11),
+              transparent 48%
+            ),
+            rgba(245, 158, 11, 0.045);
+        }
+
+        .duplicate-check-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+        }
+
+        .duplicate-check-heading h4 {
+          margin: 8px 0 0;
+          color: #ffffff;
+          font-size: 16px;
+        }
+
+        .duplicate-status {
+          flex: 0 0 auto;
+          padding: 6px 9px;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .duplicate-status-clear {
+          background: rgba(52, 211, 153, 0.1);
+          color: #6ee7b7;
+        }
+
+        .duplicate-status-warning {
+          background: rgba(245, 158, 11, 0.14);
+          color: #fde68a;
+        }
+
+        .duplicate-status-loading {
+          background: rgba(124, 92, 255, 0.13);
+          color: #c4b5fd;
+        }
+
+        .duplicate-check-copy,
+        .duplicate-check-error {
+          margin: 12px 0 0;
+          color: #8f97a8;
+          font-size: 12px;
+          line-height: 1.55;
+        }
+
+        .duplicate-check-error {
+          color: #fca5a5;
+        }
+
+        .duplicate-match-list {
+          display: grid;
+          gap: 9px;
+          margin-top: 14px;
+        }
+
+        .duplicate-match {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 12px 13px;
+          border: 1px solid rgba(251, 191, 36, 0.14);
+          border-radius: 13px;
+          background: rgba(0, 0, 0, 0.2);
+        }
+
+        .duplicate-match > div:first-child {
+          min-width: 0;
+        }
+
+        .duplicate-match strong {
+          display: block;
+          overflow: hidden;
+          color: #f8fafc;
+          font-size: 12px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .duplicate-match p,
+        .duplicate-match small {
+          display: block;
+          margin: 5px 0 0;
+          color: #81899c;
+          font-size: 10px;
+          line-height: 1.45;
+        }
+
+        .duplicate-match small {
+          color: #a78bfa;
+        }
+
+        .duplicate-match-action {
+          flex: 0 0 auto;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+        }
+
+        .duplicate-match-action span {
+          color: #fde68a;
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .duplicate-match-action a {
+          padding: 6px 8px;
+          border: 1px solid rgba(148, 163, 184, 0.16);
+          border-radius: 8px;
+          color: #c4b5fd;
+          font-size: 10px;
+          font-weight: 750;
+          text-decoration: none;
+        }
+
+        .duplicate-confirmation {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin-top: 14px;
+          padding: 12px 13px;
+          border-radius: 12px;
+          background: rgba(245, 158, 11, 0.09);
+          color: #fde68a;
+          font-size: 12px;
+          font-weight: 650;
+          line-height: 1.5;
+          cursor: pointer;
+        }
+
+        .duplicate-confirmation input {
+          width: 17px;
+          height: 17px;
+          margin: 1px 0 0;
+          accent-color: #8b5cf6;
+        }
+
         .finance-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1778,6 +2253,7 @@ export default function AIReviewPanel({
         }
 
         .scan-again-button,
+        .save-only-button,
         .save-card-button {
           min-height: 46px;
           border-radius: 12px;
@@ -1791,6 +2267,22 @@ export default function AIReviewPanel({
           border: 1px solid rgba(148, 163, 184, 0.16);
           background: rgba(255, 255, 255, 0.03);
           color: #a5adbd;
+        }
+
+        .save-only-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border: 1px solid rgba(167, 139, 250, 0.25);
+          background: rgba(124, 92, 255, 0.08);
+          color: #c4b5fd;
+        }
+
+        .save-only-button:hover:not(:disabled) {
+          border-color: rgba(167, 139, 250, 0.48);
+          background: rgba(124, 92, 255, 0.14);
+          color: #ffffff;
         }
 
         .scan-again-button:hover:not(:disabled) {
@@ -1815,6 +2307,7 @@ export default function AIReviewPanel({
         }
 
         .scan-again-button:disabled,
+        .save-only-button:disabled,
         .save-card-button:disabled {
           cursor: not-allowed;
           opacity: 0.45;
@@ -1923,14 +2416,19 @@ export default function AIReviewPanel({
 
           .review-actions {
             display: grid;
-            grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
           .scan-again-button,
+          .save-only-button,
           .save-card-button {
             width: 100%;
             min-width: 0;
             min-height: 52px;
+          }
+
+          .scan-again-button {
+            grid-column: 1 / -1;
           }
         }
 

@@ -756,7 +756,10 @@ export default function ScannerPage() {
       navigator.vibrate(70);
     }
 
-    if (continuousMode) {
+    if (
+      continuousMode &&
+      result.nextAction !== "value"
+    ) {
       scheduleAutoContinue();
     }
   }

@@ -41,6 +41,8 @@ type MarketPricePanelProps = {
     | InitialMarketPriceSnapshot
     | null;
 
+  autoStart?: boolean;
+
   onUpdated?: (
     result: GetMarketPriceResult
   ) => void;
@@ -265,6 +267,7 @@ export default function MarketPricePanel({
   manualEstimate,
   purchasePrice,
   initialMarketPrice = null,
+  autoStart = false,
   onUpdated,
 }: MarketPricePanelProps) {
   const [
@@ -302,6 +305,9 @@ export default function MarketPricePanel({
       null
     );
 
+  const autoStartCardRef =
+    useRef<string | null>(null);
+
   useEffect(() => {
     setResult(null);
     setIsLoading(false);
@@ -311,11 +317,13 @@ export default function MarketPricePanel({
 
     activeRequestRef.current?.abort();
     activeRequestRef.current = null;
+    autoStartCardRef.current = null;
   }, [cardId]);
 
   useEffect(() => {
     return () => {
       activeRequestRef.current?.abort();
+      activeRequestRef.current = null;
     };
   }, []);
 
@@ -527,6 +535,40 @@ export default function MarketPricePanel({
         onUpdated,
       ]
     );
+
+  useEffect(() => {
+    if (
+      !autoStart ||
+      autoStartCardRef.current ===
+        cardId
+    ) {
+      return;
+    }
+
+    autoStartCardRef.current =
+      cardId;
+
+    const timeoutId =
+      window.setTimeout(() => {
+        void loadMarketPrice(false);
+      }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+
+      if (
+        autoStartCardRef.current ===
+        cardId
+      ) {
+        autoStartCardRef.current =
+          null;
+      }
+    };
+  }, [
+    autoStart,
+    cardId,
+    loadMarketPrice,
+  ]);
 
   return (
     <section className="market-panel">

@@ -20,6 +20,9 @@ import {
   type EditableCardData,
   type UpdateCardResult,
 } from "@/lib/cards/updateCard";
+import type {
+  GetMarketPriceResult,
+} from "@/lib/market/getMarketPrice";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -580,6 +583,11 @@ export default function CardDetailPage() {
   ] = useState(false);
 
   const [
+    autoStartMarketResearch,
+    setAutoStartMarketResearch,
+  ] = useState(false);
+
+  const [
     saleTransaction,
     setSaleTransaction,
   ] = useState<SaleTransactionRow | null>(null);
@@ -899,6 +907,18 @@ export default function CardDetailPage() {
     void loadCard();
   }, [loadCard]);
 
+  useEffect(() => {
+    const searchParams =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    setAutoStartMarketResearch(
+      searchParams.get("value") ===
+        "1"
+    );
+  }, [cardId]);
+
   async function handleCardUpdated(
     result: UpdateCardResult
   ) {
@@ -922,6 +942,84 @@ export default function CardDetailPage() {
       result.message
     );
   }
+
+  const handleMarketPriceUpdated =
+    useCallback(
+      (
+        result: GetMarketPriceResult
+      ) => {
+        if (result.activated) {
+          setCard(
+            (currentCard) => {
+              if (!currentCard) {
+                return currentCard;
+              }
+
+              return {
+                ...currentCard,
+                market_estimated_value:
+                  result.estimate
+                    .estimatedValue,
+                market_value_low:
+                  result.estimate
+                    .lowValue,
+                market_value_high:
+                  result.estimate
+                    .highValue,
+                market_value_currency:
+                  result.estimate
+                    .currency,
+                market_value_confidence:
+                  result.estimate
+                    .confidenceScore,
+                market_value_updated_at:
+                  result.estimate
+                    .dataAsOf ??
+                  result.estimate
+                    .updatedAt,
+                current_market_estimate_id:
+                  result.estimate.id,
+              };
+            }
+          );
+        }
+
+        setMessage(result.message);
+
+        const searchParams =
+          new URLSearchParams(
+            window.location.search
+          );
+
+        if (
+          searchParams.get("value") !==
+          "1"
+        ) {
+          return;
+        }
+
+        searchParams.delete("value");
+
+        const nextSearch =
+          searchParams.toString();
+
+        setAutoStartMarketResearch(
+          false
+        );
+
+        router.replace(
+          `${window.location.pathname}${
+            nextSearch
+              ? `?${nextSearch}`
+              : ""
+          }#market-value`,
+          {
+            scroll: false,
+          }
+        );
+      },
+      [router]
+    );
 
   if (loading) {
     return (
@@ -1845,12 +1943,18 @@ export default function CardDetailPage() {
         </div>
       </section>
 
-      <section className="market-price-section">
+      <section
+        className="market-price-section"
+        id="market-value"
+      >
         <MarketPricePanel
           cardId={card.id}
           currency={currency}
           manualEstimate={estimatedValue}
           purchasePrice={purchasePrice}
+          autoStart={
+            autoStartMarketResearch
+          }
           initialMarketPrice={{
             estimatedValue:
               marketEstimatedValue,
@@ -1865,47 +1969,9 @@ export default function CardDetailPage() {
             updatedAt:
               card.market_value_updated_at,
           }}
-          onUpdated={(result) => {
-            if (result.activated) {
-              setCard(
-                (currentCard) => {
-                  if (!currentCard) {
-                    return currentCard;
-                  }
-
-                  return {
-                    ...currentCard,
-                    market_estimated_value:
-                      result.estimate
-                        .estimatedValue,
-                    market_value_low:
-                      result.estimate
-                        .lowValue,
-                    market_value_high:
-                      result.estimate
-                        .highValue,
-                    market_value_currency:
-                      result.estimate
-                        .currency,
-                    market_value_confidence:
-                      result.estimate
-                        .confidenceScore,
-                    market_value_updated_at:
-                      result.estimate
-                        .dataAsOf ??
-                      result.estimate
-                        .updatedAt,
-                    current_market_estimate_id:
-                      result.estimate.id,
-                  };
-                }
-              );
-            }
-
-            setMessage(
-              result.message
-            );
-          }}
+          onUpdated={
+            handleMarketPriceUpdated
+          }
         />
       </section>
 

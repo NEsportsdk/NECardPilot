@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -109,6 +110,8 @@ export default function ScanCardModal({
   onCardSaved,
   reloadAfterSave = true,
 }: ScanCardModalProps) {
+  const router = useRouter();
+
   const [frontImage, setFrontImage] = useState<File | null>(null);
   const [backImage, setBackImage] = useState<File | null>(null);
 
@@ -176,6 +179,15 @@ export default function ScanCardModal({
       resetModal();
       onClose();
 
+      if (
+        result.nextAction === "value"
+      ) {
+        router.push(
+          `/cards/${result.cardId}?value=1#market-value`
+        );
+        return;
+      }
+
       /*
        * Existing collection pages retain their full reload so the newly
        * saved card appears immediately. The global scanner disables this
@@ -187,7 +199,13 @@ export default function ScanCardModal({
         }, 100);
       }
     },
-    [onCardSaved, onClose, reloadAfterSave, resetModal]
+    [
+      onCardSaved,
+      onClose,
+      reloadAfterSave,
+      resetModal,
+      router,
+    ]
   );
 
   useEffect(() => {
