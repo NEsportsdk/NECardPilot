@@ -906,8 +906,8 @@ export default function CardshowCenterPage() {
             <p className="eyebrow">Two-week sprint</p>
             <h2>Cardshow readiness</h2>
             <p>
-              Event setup and inventory management are live. Purchase-lot
-              allocation, rapid intake and multi-card checkout are next.
+              Event setup, inventory management and purchase-lot allocation are
+              live. Rapid intake and multi-card checkout are next.
             </p>
           </div>
 
@@ -1159,8 +1159,8 @@ export default function CardshowCenterPage() {
               <p className="eyebrow">Acquisition accounting</p>
               <h2>Purchase lots</h2>
               <p>
-                Lots will distribute total acquisition cost across individual
-                cards before sales are recorded.
+                Distribute total acquisition cost across individual cards before
+                sales are recorded.
               </p>
             </div>
             <span className="result-count">{purchaseLots.length} recent</span>
