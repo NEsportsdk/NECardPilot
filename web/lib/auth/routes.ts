@@ -3,6 +3,7 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/signup",
   "/forgot-password",
   "/auth",
+  "/manifest.webmanifest",
 ] as const;
 
 const GUEST_ONLY_ROUTE_PREFIXES = [

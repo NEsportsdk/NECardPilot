@@ -32,6 +32,15 @@ npm run dev
 
 Appen er derefter tilgængelig på <http://localhost:3000>.
 
+## Mobil og installation
+
+På skærme op til 620 px får de autentificerede app-flows en fast,
+safe-area-aware bundnavigation med scanner som primær handling. Den sekundære
+navigation åbnes som en tastaturvenlig dialog, og en offline-status advarer, når
+live-data midlertidigt ikke kan hentes. Vallective udstiller samtidig et web app
+manifest med genveje til scanner og kortbibliotek. Appen cacher endnu ikke data
+til fuld offline-brug.
+
 ## Kvalitetskontrol
 
 Kør kontrollerne enkeltvis:
