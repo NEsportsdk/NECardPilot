@@ -11,7 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import AddCardModal from "@/components/AddCardModal";
-import AuthenticatedUserCard from "@/components/auth/AuthenticatedUserCard";
+import AppSidebar from "@/components/app/AppSidebar";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -118,24 +118,6 @@ type LibraryCard = CardRow & {
   condition_group: Exclude<ConditionFilter, "all">;
   activity_at: string;
 };
-
-type NavigationItem = {
-  label: string;
-  icon: string;
-  href?: string;
-  active?: boolean;
-  comingSoon?: boolean;
-};
-
-const navigation: NavigationItem[] = [
-  { label: "Home", icon: "⌂", href: "/" },
-  { label: "Collections", icon: "◇", href: "/#collections" },
-  { label: "Cards", icon: "▱", active: true },
-  { label: "Scanner", icon: "◎", href: "/scanner" },
-  { label: "Grading", icon: "◈", comingSoon: true },
-  { label: "Transactions", icon: "↕", href: "/transactions" },
-  { label: "Analytics", icon: "⌁", href: "/analytics" },
-];
 
 const ATTRIBUTE_KEYS = [
   "sport",
@@ -951,74 +933,9 @@ export default function GlobalCardsPage() {
     router.push(`/collections/${collectionId}`);
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  }
-
   return (
     <div className="cards-app-shell">
-      <aside className="cards-sidebar">
-        <div>
-          <Link className="brand" href="/">
-            <div className="brand-mark">V</div>
-
-            <div>
-              <p className="brand-name">Vallective</p>
-              <p className="brand-subtitle">Collector Intelligence</p>
-            </div>
-          </Link>
-
-          <nav className="navigation">
-            <p className="navigation-label">Workspace</p>
-
-            {navigation.map((item) => {
-              if (item.href) {
-                return (
-                  <Link
-                    className={`navigation-item ${
-                      item.active ? "navigation-item-active" : ""
-                    }`}
-                    href={item.href}
-                    key={item.label}
-                  >
-                    <span className="navigation-icon">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              }
-
-              return (
-                <button
-                  className={`navigation-item ${
-                    item.active ? "navigation-item-active" : ""
-                  }`}
-                  key={item.label}
-                  type="button"
-                  disabled={item.comingSoon || item.active}
-                >
-                  <span className="navigation-icon">{item.icon}</span>
-                  <span>{item.label}</span>
-
-                  {item.comingSoon && (
-                    <span className="coming-soon">Soon</span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="sidebar-footer">
-          <button className="settings-button" type="button" disabled>
-            <span className="navigation-icon">⚙</span>
-            Settings
-            <span className="coming-soon">Soon</span>
-          </button>
-
-          <AuthenticatedUserCard onLogout={handleLogout} />
-        </div>
-      </aside>
+      <AppSidebar variant="grid-cards" />
 
       <main className="cards-main-content">
         <header className="cards-page-header">

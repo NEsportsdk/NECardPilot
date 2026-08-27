@@ -13,9 +13,9 @@ import {
 import { useRouter } from "next/navigation";
 
 import AddCardModal from "@/components/AddCardModal";
-import AuthenticatedUserCard, {
-  useCurrentUserIdentity,
-} from "@/components/auth/AuthenticatedUserCard";
+import AppSidebar from "@/components/app/AppSidebar";
+import { useCurrentUserIdentity } from "@/components/auth/AuthenticatedUserCard";
+import FirstRunOnboarding from "@/components/onboarding/FirstRunOnboarding";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -119,15 +119,6 @@ type CollectionSummary = Collection & {
   last_activity_at: string;
 };
 
-type NavigationItem = {
-  label: string;
-  icon: string;
-  href?: string;
-  targetId?: string;
-  active?: boolean;
-  comingSoon?: boolean;
-};
-
 type ActivityItem = {
   id: string;
   type: "card" | "sale" | "collection";
@@ -139,16 +130,6 @@ type ActivityItem = {
   currency: string;
   tone: "neutral" | "positive" | "negative";
 };
-
-const navigation: NavigationItem[] = [
-  { label: "Home", icon: "⌂", active: true },
-  { label: "Collections", icon: "◇", targetId: "collections" },
-  { label: "Cards", icon: "▱", href: "/cards" },
-  { label: "Scanner", icon: "◎", href: "/scanner" },
-  { label: "Grading", icon: "◈", comingSoon: true },
-  { label: "Transactions", icon: "↕", href: "/transactions" },
-  { label: "Analytics", icon: "⌁", href: "/analytics" },
-];
 
 function toDatabaseNumber(value: NumericDatabaseValue) {
   if (value === null || value === undefined || value === "") {
@@ -596,11 +577,6 @@ export default function HomePage() {
     await loadDashboard();
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  }
-
   function handleScanCard() {
     setShowAddCard(false);
     router.push("/scanner");
@@ -609,29 +585,6 @@ export default function HomePage() {
   function handleManualCard(collectionId: string) {
     setShowAddCard(false);
     router.push(`/collections/${collectionId}`);
-  }
-
-  function handleNavigation(item: NavigationItem) {
-    if (item.comingSoon) {
-      return;
-    }
-
-    if (item.active) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-
-    if (item.href) {
-      router.push(item.href);
-      return;
-    }
-
-    if (item.targetId) {
-      document.getElementById(item.targetId)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
   }
 
   const collectionSummaries = useMemo<CollectionSummary[]>(() => {
@@ -935,54 +888,7 @@ export default function HomePage() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div>
-          <div className="brand">
-            <div className="brand-mark">V</div>
-
-            <div>
-              <p className="brand-name">Vallective</p>
-              <p className="brand-subtitle">Collector Intelligence</p>
-            </div>
-          </div>
-
-          <nav className="navigation">
-            <p className="navigation-label">Workspace</p>
-
-            {navigation.map((item) => (
-              <button
-                className={`navigation-item ${
-                  item.active ? "navigation-item-active" : ""
-                }`}
-                key={item.label}
-                type="button"
-                disabled={item.comingSoon}
-                onClick={() => handleNavigation(item)}
-              >
-                <span className="navigation-icon">{item.icon}</span>
-                <span>{item.label}</span>
-
-                {item.comingSoon && (
-                  <span className="coming-soon">Soon</span>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <div className="sidebar-footer">
-          <button className="settings-button" type="button" disabled>
-            <span className="navigation-icon">⚙</span>
-            Settings
-            <span className="coming-soon">Soon</span>
-          </button>
-
-          <AuthenticatedUserCard
-            identity={userIdentity}
-            onLogout={handleLogout}
-          />
-        </div>
-      </aside>
+      <AppSidebar identity={userIdentity} variant="rail" />
 
       <main className="main-content">
         <header className="topbar">
@@ -1024,6 +930,23 @@ export default function HomePage() {
             <span>i</span>
             <p>{message}</p>
           </div>
+        )}
+
+        {!loading && (
+          <FirstRunOnboarding
+            cardsCount={cards.length}
+            collectionsCount={collections.length}
+            displayName={userIdentity.displayName}
+            firstCardId={cards[0]?.id}
+            onAddCard={() => setShowAddCard(true)}
+            onCreateCollection={() => {
+              setCreateMessage("");
+              setShowCreateCollection(true);
+            }}
+            valuedCardsCount={cards.filter(
+              (card) => card.valuation_source !== "none"
+            ).length}
+          />
         )}
 
         {hasMixedCurrencies && (

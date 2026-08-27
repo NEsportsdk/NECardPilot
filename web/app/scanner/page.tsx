@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import ScanCardModal from "@/components/ScanCardModal";
-import AuthenticatedUserCard from "@/components/auth/AuthenticatedUserCard";
+import AppSidebar from "@/components/app/AppSidebar";
 import RapidIntakePanel from "@/components/scan/RapidIntakePanel";
 import { upsertCardshowInventory } from "@/lib/cardshow/upsertCardshowInventory";
 import type {
@@ -58,14 +58,6 @@ type SessionEntry = {
   needsPricing?: boolean;
 };
 
-type NavigationItem = {
-  label: string;
-  icon: string;
-  href?: string;
-  active?: boolean;
-  comingSoon?: boolean;
-};
-
 const SELECTED_COLLECTION_KEY =
   "necardpilot.scanner.selectedCollectionId";
 
@@ -91,16 +83,6 @@ type PersistedScannerSession = {
   entries: SessionEntry[];
   finished: boolean;
 };
-
-const navigation: NavigationItem[] = [
-  { label: "Home", icon: "⌂", href: "/" },
-  { label: "Collections", icon: "◇", href: "/#collections" },
-  { label: "Cards", icon: "▱", href: "/cards" },
-  { label: "Scanner", icon: "◎", active: true },
-  { label: "Grading", icon: "◈", comingSoon: true },
-  { label: "Transactions", icon: "↕", href: "/transactions" },
-  { label: "Analytics", icon: "⌁", href: "/analytics" },
-];
 
 function getCollectionTypeLabel(type: CollectionType) {
   return type === "pc"
@@ -821,77 +803,7 @@ export default function ScannerPage() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div>
-          <Link className="brand" href="/">
-            <div className="brand-mark">V</div>
-
-            <div>
-              <p className="brand-name">Vallective</p>
-              <p className="brand-subtitle">Collector Intelligence</p>
-            </div>
-          </Link>
-
-          <nav className="navigation">
-            <p className="navigation-label">Workspace</p>
-
-            {navigation.map((item) => {
-              if (item.href) {
-                return (
-                  <Link
-                    className="navigation-item"
-                    href={item.href}
-                    key={item.label}
-                  >
-                    <span className="navigation-icon">
-                      {item.icon}
-                    </span>
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              }
-
-              return (
-                <button
-                  className={`navigation-item ${
-                    item.active
-                      ? "navigation-item-active"
-                      : ""
-                  }`}
-                  key={item.label}
-                  type="button"
-                  disabled={
-                    item.active || item.comingSoon
-                  }
-                >
-                  <span className="navigation-icon">
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-
-                  {item.comingSoon && (
-                    <span className="coming-soon">Soon</span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="sidebar-footer">
-          <button
-            className="settings-button"
-            type="button"
-            disabled
-          >
-            <span className="navigation-icon">⚙</span>
-            Settings
-            <span className="coming-soon">Soon</span>
-          </button>
-
-          <AuthenticatedUserCard />
-        </div>
-      </aside>
+      <AppSidebar variant="grid-scanner" />
 
       <main className="main-content">
         <header className="scanner-header">
