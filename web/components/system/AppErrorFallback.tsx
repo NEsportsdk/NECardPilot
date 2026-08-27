@@ -29,7 +29,7 @@ export function AppErrorFallback({
     <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 py-16 text-zinc-100">
       <section className="w-full max-w-lg rounded-3xl border border-white/10 bg-zinc-900 p-8 text-center shadow-2xl shadow-black/30">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-400">
-          NECardPilot
+          Vallective
         </p>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">
           Noget gik galt

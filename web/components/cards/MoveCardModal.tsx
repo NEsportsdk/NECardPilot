@@ -666,7 +666,7 @@ export default function MoveCardModal({
                 </strong>
 
                 <p>
-                  NECardPilot updates its
+                  Vallective updates its
                   location and records
                   the movement in the
                   card’s collection

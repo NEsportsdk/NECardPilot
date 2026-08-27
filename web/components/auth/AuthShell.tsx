@@ -19,9 +19,9 @@ export default function AuthShell({
     <main className={styles.page}>
       <section className={styles.card}>
         <div className={styles.logo} aria-hidden="true">
-          N
+          V
         </div>
-        <p className={styles.eyebrow}>NECARDPILOT</p>
+        <p className={styles.eyebrow}>VALLECTIVE</p>
         <h1 className={styles.title}>{title}</h1>
         <p className={styles.description}>{description}</p>
         {children}

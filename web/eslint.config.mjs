@@ -7,7 +7,7 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
-      // NECardPilot currently loads Supabase data and initializes modal state in
+      // Vallective currently loads Supabase data and initializes modal state in
       // effects. These effects synchronize with external data/UI lifecycles; a
       // future server/SWR migration can remove the client-side state bridge.
       "react-hooks/set-state-in-effect": "off",

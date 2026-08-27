@@ -73,10 +73,10 @@ describe("auth redirects", () => {
   it("prefers the configured production site URL", () => {
     expect(
       getAuthRedirectOrigin({
-        NEXT_PUBLIC_SITE_URL: "https://necardpilot.vercel.app/path",
+        NEXT_PUBLIC_SITE_URL: "https://vallective.com/path",
         VERCEL_URL: "preview.example.vercel.app",
       })
-    ).toBe("https://necardpilot.vercel.app");
+    ).toBe("https://vallective.com");
   });
 
   it("uses the preview host outside production", () => {

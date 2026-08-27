@@ -823,11 +823,11 @@ export default function ScannerPage() {
       <aside className="sidebar">
         <div>
           <Link className="brand" href="/">
-            <div className="brand-mark">N</div>
+            <div className="brand-mark">V</div>
 
             <div>
-              <p className="brand-name">NECardPilot</p>
-              <p className="brand-subtitle">Collectibles OS</p>
+              <p className="brand-name">Vallective</p>
+              <p className="brand-subtitle">Collector Intelligence</p>
             </div>
           </Link>
 
@@ -1362,7 +1362,7 @@ export default function ScannerPage() {
                 <p className="eyebrow">Session mode</p>
                 <h2>Continuous scanning</h2>
                 <p>
-                  After each reviewed and saved card, NECardPilot opens
+                  After each reviewed and saved card, Vallective opens
                   a fresh scanner automatically. The camera itself still
                   requires a tap on iPhone.
                 </p>

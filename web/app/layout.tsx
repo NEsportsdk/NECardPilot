@@ -15,8 +15,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NECardPilot",
-  description: "Administrér kort, portefølje, grading og Cardshow-inventar.",
+  metadataBase: new URL("https://vallective.com"),
+  title: {
+    default: "Vallective",
+    template: "%s | Vallective",
+  },
+  description:
+    "Saml, forstå og udvikl din kortportefølje med scanning, markedsdata, grading og Cardshow-værktøjer.",
+  openGraph: {
+    title: "Vallective",
+    description: "Collect what matters. Know what it's worth.",
+    url: "https://vallective.com",
+    siteName: "Vallective",
+    locale: "da_DK",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

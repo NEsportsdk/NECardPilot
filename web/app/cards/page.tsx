@@ -960,11 +960,11 @@ export default function GlobalCardsPage() {
       <aside className="cards-sidebar">
         <div>
           <Link className="brand" href="/">
-            <div className="brand-mark">N</div>
+            <div className="brand-mark">V</div>
 
             <div>
-              <p className="brand-name">NECardPilot</p>
-              <p className="brand-subtitle">Collectibles OS</p>
+              <p className="brand-name">Vallective</p>
+              <p className="brand-subtitle">Collector Intelligence</p>
             </div>
           </Link>
 

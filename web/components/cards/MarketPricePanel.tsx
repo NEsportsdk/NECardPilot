@@ -541,7 +541,7 @@ export default function MarketPricePanel({
           </h2>
 
           <p>
-            NECardPilot researches price
+            Vallective researches price
             evidence for the exact card,
             filters mismatched listings
             and calculates a weighted
