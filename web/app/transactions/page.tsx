@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
   useCallback,
@@ -10,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import AuthenticatedUserCard from "@/components/auth/AuthenticatedUserCard";
+import AppSidebar from "@/components/app/AppSidebar";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -145,24 +144,6 @@ type TransactionRecord = {
   cardStateBefore: string | null;
   card: CardDetails;
 };
-
-type NavigationItem = {
-  label: string;
-  icon: string;
-  href?: string;
-  active?: boolean;
-  comingSoon?: boolean;
-};
-
-const navigation: NavigationItem[] = [
-  { label: "Home", icon: "\u2302", href: "/" },
-  { label: "Collections", icon: "\u25C7", href: "/#collections" },
-  { label: "Cards", icon: "\u25B1", href: "/cards" },
-  { label: "Scanner", icon: "\u25CE", href: "/scanner" },
-  { label: "Grading", icon: "\u25C8", comingSoon: true },
-  { label: "Transactions", icon: "\u2195", active: true },
-  { label: "Analytics", icon: "\u2301", href: "/analytics" },
-];
 
 const ATTRIBUTE_KEYS = [
   "team",
@@ -320,7 +301,6 @@ function escapeCsvValue(value: unknown) {
 }
 
 export default function TransactionsPage() {
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
@@ -915,74 +895,9 @@ export default function TransactionsPage() {
     URL.revokeObjectURL(url);
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  }
-
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div>
-          <Link className="brand" href="/">
-            <div className="brand-mark">V</div>
-
-            <div>
-              <p className="brand-name">Vallective</p>
-              <p className="brand-subtitle">Collector Intelligence</p>
-            </div>
-          </Link>
-
-          <nav className="navigation">
-            <p className="navigation-label">Workspace</p>
-
-            {navigation.map((item) => {
-              if (item.href) {
-                return (
-                  <Link
-                    className={`navigation-item ${
-                      item.active ? "navigation-item-active" : ""
-                    }`}
-                    href={item.href}
-                    key={item.label}
-                  >
-                    <span className="navigation-icon">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              }
-
-              return (
-                <button
-                  className={`navigation-item ${
-                    item.active ? "navigation-item-active" : ""
-                  }`}
-                  key={item.label}
-                  type="button"
-                  disabled={item.comingSoon || item.active}
-                >
-                  <span className="navigation-icon">{item.icon}</span>
-                  <span>{item.label}</span>
-
-                  {item.comingSoon && (
-                    <span className="coming-soon">Soon</span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="sidebar-footer">
-          <button className="settings-button" type="button" disabled>
-            <span className="navigation-icon">{"\u2699"}</span>
-            Settings
-            <span className="coming-soon">Soon</span>
-          </button>
-
-          <AuthenticatedUserCard onLogout={handleLogout} />
-        </div>
-      </aside>
+      <AppSidebar variant="grid-transactions" />
 
       <main className="main-content">
         <header className="page-header">

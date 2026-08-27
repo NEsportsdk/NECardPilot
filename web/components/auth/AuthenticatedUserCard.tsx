@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -33,6 +34,20 @@ function getInitials(displayName: string) {
   return `${firstInitial}${lastInitial}`.toLocaleUpperCase("da-DK");
 }
 
+export function getUserIdentity(user: User): UserIdentity {
+  const metadataName = user.user_metadata?.display_name;
+  const displayName =
+    typeof metadataName === "string" && metadataName.trim()
+      ? metadataName.trim()
+      : user.email?.trim() || fallbackIdentity.displayName;
+
+  return {
+    displayName,
+    email: user.email?.trim() ?? "",
+    initials: getInitials(displayName),
+  };
+}
+
 export function useCurrentUserIdentity(enabled = true) {
   const supabase = useMemo(() => createClient(), []);
   const [identity, setIdentity] = useState<UserIdentity>(fallbackIdentity);
@@ -53,23 +68,24 @@ export function useCurrentUserIdentity(enabled = true) {
         return;
       }
 
-      const metadataName = user.user_metadata?.display_name;
-      const displayName =
-        typeof metadataName === "string" && metadataName.trim()
-          ? metadataName.trim()
-          : user.email?.trim() || fallbackIdentity.displayName;
-
-      setIdentity({
-        displayName,
-        email: user.email?.trim() ?? "",
-        initials: getInitials(displayName),
-      });
+      setIdentity(getUserIdentity(user));
     }
 
     void loadIdentity();
 
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isActive || !session?.user) {
+        return;
+      }
+
+      setIdentity(getUserIdentity(session.user));
+    });
+
     return () => {
       isActive = false;
+      subscription.unsubscribe();
     };
   }, [enabled, supabase]);
 
