@@ -13,6 +13,9 @@ import {
 import { useRouter } from "next/navigation";
 
 import AddCardModal from "@/components/AddCardModal";
+import AuthenticatedUserCard, {
+  useCurrentUserIdentity,
+} from "@/components/auth/AuthenticatedUserCard";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -347,6 +350,7 @@ function getCardSubtitle(card: DashboardCard) {
 export default function HomePage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const userIdentity = useCurrentUserIdentity();
 
   const [collections, setCollections] = useState<Collection[]>([]);
   const [cards, setCards] = useState<DashboardCard[]>([]);
@@ -973,23 +977,10 @@ export default function HomePage() {
             <span className="coming-soon">Soon</span>
           </button>
 
-          <div className="user-card">
-            <div className="user-avatar">NE</div>
-
-            <div className="user-information">
-              <p>Nicky Eckhardt</p>
-              <span>Owner</span>
-            </div>
-
-            <button
-              className="logout-button"
-              type="button"
-              onClick={handleLogout}
-              title="Log ud"
-            >
-              ↗
-            </button>
-          </div>
+          <AuthenticatedUserCard
+            identity={userIdentity}
+            onLogout={handleLogout}
+          />
         </div>
       </aside>
 
@@ -997,7 +988,7 @@ export default function HomePage() {
         <header className="topbar">
           <div>
             <p className="eyebrow">Command center</p>
-            <h1>{getGreeting()}, Nicky</h1>
+            <h1>{getGreeting()}, {userIdentity.displayName}</h1>
 
             <p className="topbar-description">
               Dit samlede overblik over aktive kort, markedsværdi og realiserede salg.
@@ -1707,7 +1698,7 @@ export default function HomePage() {
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setName(event.target.value)
                 }
-                placeholder="Example: Nicky PC"
+                placeholder="Example: Rookie collection"
                 autoFocus
               />
 

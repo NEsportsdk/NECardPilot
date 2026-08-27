@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 
+import AuthenticatedUserCard from "@/components/auth/AuthenticatedUserCard";
 import CreateCardshowEventModal from "@/components/cardshow/CreateCardshowEventModal";
 import CardshowInventoryManager from "@/components/cardshow/CardshowInventoryManager";
 import type { CreateCardshowEventResult } from "@/lib/cardshow/createCardshowEvent";
@@ -814,23 +815,7 @@ export default function CardshowCenterPage() {
             <span className="coming-soon">Soon</span>
           </button>
 
-          <div className="user-card">
-            <div className="user-avatar">NE</div>
-            <div className="user-information">
-              <p>Nicky Eckhardt</p>
-              <span>Owner</span>
-            </div>
-            <button
-              className="logout-button"
-              type="button"
-              onClick={() => {
-                void handleLogout();
-              }}
-              title="Log out"
-            >
-              ↗
-            </button>
-          </div>
+          <AuthenticatedUserCard onLogout={handleLogout} />
         </div>
       </aside>
 

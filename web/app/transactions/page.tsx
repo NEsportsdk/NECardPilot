@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 
+import AuthenticatedUserCard from "@/components/auth/AuthenticatedUserCard";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -979,25 +980,7 @@ export default function TransactionsPage() {
             <span className="coming-soon">Soon</span>
           </button>
 
-          <div className="user-card">
-            <div className="user-avatar">NE</div>
-
-            <div className="user-information">
-              <p>Nicky Eckhardt</p>
-              <span>Owner</span>
-            </div>
-
-            <button
-              className="logout-button"
-              type="button"
-              onClick={() => {
-                void handleLogout();
-              }}
-              title="Log out"
-            >
-              {"\u2197"}
-            </button>
-          </div>
+          <AuthenticatedUserCard onLogout={handleLogout} />
         </div>
       </aside>
 

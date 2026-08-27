@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import ScanCardModal from "@/components/ScanCardModal";
+import AuthenticatedUserCard from "@/components/auth/AuthenticatedUserCard";
 import RapidIntakePanel from "@/components/scan/RapidIntakePanel";
 import { upsertCardshowInventory } from "@/lib/cardshow/upsertCardshowInventory";
 import type {
@@ -888,14 +889,7 @@ export default function ScannerPage() {
             <span className="coming-soon">Soon</span>
           </button>
 
-          <div className="user-card">
-            <div className="user-avatar">NE</div>
-
-            <div className="user-information">
-              <p>Nicky Eckhardt</p>
-              <span>Owner</span>
-            </div>
-          </div>
+          <AuthenticatedUserCard />
         </div>
       </aside>
 

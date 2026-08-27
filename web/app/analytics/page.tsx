@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 
+import AuthenticatedUserCard from "@/components/auth/AuthenticatedUserCard";
 import { createClient } from "@/lib/supabase/client";
 
 type NumericDatabaseValue = number | string | null;
@@ -1014,13 +1015,7 @@ export default function AnalyticsPage() {
             <span className="coming-soon">Soon</span>
           </button>
 
-          <div className="user-card">
-            <div className="user-avatar">NE</div>
-            <div className="user-information">
-              <p>Nicky Eckhardt</p>
-              <span>Owner</span>
-            </div>
-          </div>
+          <AuthenticatedUserCard />
         </div>
       </aside>
 
