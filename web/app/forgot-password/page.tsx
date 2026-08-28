@@ -26,9 +26,9 @@ export default async function ForgotPasswordPage({
 
   return (
     <AuthShell
-      title="Nulstil adgangskode"
-      description="Skriv din e-mail, så sender vi et sikkert link til at vælge en ny adgangskode."
-      footer="Af sikkerhedshensyn fortæller vi ikke, om en bestemt e-mail findes i systemet."
+      title="Reset your password"
+      description="Enter your email and we'll send a secure link to choose a new password."
+      footer="For your security, we never reveal whether a specific email is registered."
     >
       {errorMessage && (
         <div className={`${styles.notice} ${styles.noticeError}`} role="alert">
@@ -41,13 +41,13 @@ export default async function ForgotPasswordPage({
           className={`${styles.notice} ${styles.noticeSuccess}`}
           role="status"
         >
-          Hvis e-mailadressen er knyttet til en konto, er nulstillingslinket
-          sendt. Tjek også spam-mappen.
+          If the email is linked to an account, the reset link has been sent.
+          Check your spam folder too.
         </div>
       ) : (
         <form action={requestPasswordReset} className={styles.form}>
           <label className={styles.field} htmlFor="email">
-            <span className={styles.fieldLabel}>E-mail</span>
+            <span className={styles.fieldLabel}>Email</span>
             <input
               className={styles.input}
               id="email"
@@ -62,19 +62,19 @@ export default async function ForgotPasswordPage({
           </label>
 
           <AuthSubmitButton
-            label="Send nulstillingslink"
-            pendingLabel="Sender link…"
+            label="Send reset link"
+            pendingLabel="Sending link…"
           />
         </form>
       )}
 
-      <nav className={styles.actionLinks} aria-label="Kontohjælp">
+      <nav className={styles.actionLinks} aria-label="Account support">
         <Link className={styles.link} href="/login">
-          Tilbage til login
+          Back to sign in
         </Link>
         {resetSent && (
           <Link className={styles.link} href="/forgot-password">
-            Send igen
+            Send again
           </Link>
         )}
       </nav>

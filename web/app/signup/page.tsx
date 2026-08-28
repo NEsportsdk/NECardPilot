@@ -32,9 +32,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
 
   return (
     <AuthShell
-      title="Opret din konto"
-      description="Start din sikre kortsamling og få hele Vallective samlet ét sted."
-      footer="Vi sender kun kontomails, som er nødvendige for login og sikkerhed."
+      title="Create your account"
+      description="Build your secure card collection and keep every part of Vallective in one place."
+      footer="We'll only send essential account and security emails."
     >
       {errorMessage && (
         <div className={`${styles.notice} ${styles.noticeError}`} role="alert">
@@ -48,12 +48,12 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             className={`${styles.notice} ${styles.noticeSuccess}`}
             role="status"
           >
-            Tjek din indbakke. Hvis adressen kan bruges, har vi sendt et
-            bekræftelseslink, som åbner din nye Vallective-konto.
+            Check your inbox. If this address can be used, we sent a secure
+            confirmation link that opens your new Vallective account.
           </div>
-          <nav className={styles.actionLinks} aria-label="Kontohjælp">
+          <nav className={styles.actionLinks} aria-label="Account support">
             <Link className={styles.link} href={loginHref}>
-              Tilbage til login
+              Back to sign in
             </Link>
           </nav>
         </>
@@ -63,7 +63,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             <input type="hidden" name="next" value={nextPath} />
 
             <label className={styles.field} htmlFor="displayName">
-              <span className={styles.fieldLabel}>Navn</span>
+              <span className={styles.fieldLabel}>Name</span>
               <input
                 className={styles.input}
                 id="displayName"
@@ -77,7 +77,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             </label>
 
             <label className={styles.field} htmlFor="email">
-              <span className={styles.fieldLabel}>E-mail</span>
+              <span className={styles.fieldLabel}>Email</span>
               <input
                 className={styles.input}
                 id="email"
@@ -92,7 +92,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             </label>
 
             <label className={styles.field} htmlFor="password">
-              <span className={styles.fieldLabel}>Adgangskode</span>
+              <span className={styles.fieldLabel}>Password</span>
               <input
                 className={styles.input}
                 id="password"
@@ -103,13 +103,13 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                 required
               />
               <span className={styles.hint}>
-                Mindst {MIN_PASSWORD_LENGTH} tegn med små og store bogstaver
-                samt et tal.
+                At least {MIN_PASSWORD_LENGTH} characters with uppercase and
+                lowercase letters plus a number.
               </span>
             </label>
 
             <label className={styles.field} htmlFor="confirmPassword">
-              <span className={styles.fieldLabel}>Gentag adgangskode</span>
+              <span className={styles.fieldLabel}>Confirm password</span>
               <input
                 className={styles.input}
                 id="confirmPassword"
@@ -122,14 +122,14 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             </label>
 
             <AuthSubmitButton
-              label="Opret konto"
-              pendingLabel="Opretter konto…"
+              label="Create account"
+              pendingLabel="Creating account…"
             />
           </form>
 
-          <nav className={styles.actionLinks} aria-label="Kontohjælp">
+          <nav className={styles.actionLinks} aria-label="Account support">
             <Link className={styles.link} href={loginHref}>
-              Har du allerede en konto? Log ind
+              Already have an account? Sign in
             </Link>
           </nav>
         </>

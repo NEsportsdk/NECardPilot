@@ -11,18 +11,18 @@ function loginErrorMessage(message: string) {
   const normalized = message.toLowerCase();
 
   if (normalized.includes("invalid login credentials")) {
-    return "E-mail eller adgangskode er forkert.";
+    return "Incorrect email or password.";
   }
 
   if (normalized.includes("email not confirmed")) {
-    return "E-mailadressen er endnu ikke bekræftet.";
+    return "Confirm your email address before signing in.";
   }
 
   if (normalized.includes("too many requests")) {
-    return "Der har været for mange loginforsøg. Vent et øjeblik og prøv igen.";
+    return "Too many sign-in attempts. Wait a moment and try again.";
   }
 
-  return "Login kunne ikke gennemføres. Kontrollér dine oplysninger og prøv igen.";
+  return "We couldn't sign you in. Check your details and try again.";
 }
 
 function redirectToLoginWithError(message: string, nextPath: string): never {
@@ -45,7 +45,7 @@ export async function login(formData: FormData) {
   }
 
   if (!password) {
-    redirectToLoginWithError("Indtast din adgangskode.", nextPath);
+    redirectToLoginWithError("Enter your password.", nextPath);
   }
 
   const supabase = await createClient();
@@ -61,7 +61,7 @@ export async function login(formData: FormData) {
 
   if (!data.user || !data.session) {
     redirectToLoginWithError(
-      "Login kunne ikke gennemføres. Prøv igen.",
+      "We couldn't sign you in. Try again.",
       nextPath
     );
   }

@@ -14,6 +14,8 @@
     "typecheck": "tsc --noEmit --incremental false",
     "test": "vitest",
     "test:run": "vitest run",
+    "smoke": "node scripts/beta-smoke.mjs",
+    "smoke:production": "node scripts/beta-smoke.mjs --base-url https://vallective.com",
     "check": "npm run typecheck && npm run lint && npm run test:run && npm run build"
   },
   "dependencies": {

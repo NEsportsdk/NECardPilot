@@ -26,7 +26,7 @@ export function validateEmail(value: unknown): ValidationResult<string> {
   if (!email || !EMAIL_PATTERN.test(email) || email.length > 254) {
     return {
       ok: false,
-      message: "Indtast en gyldig e-mailadresse.",
+      message: "Enter a valid email address.",
     };
   }
 
@@ -40,19 +40,19 @@ export function validatePassword(password: unknown): ValidationResult<string> {
   if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
     return {
       ok: false,
-      message: `Vælg en adgangskode på mindst ${MIN_PASSWORD_LENGTH} tegn.`,
+      message: `Choose a password with at least ${MIN_PASSWORD_LENGTH} characters.`,
     };
   }
 
   if (
-    !/[a-zæøå]/.test(password) ||
-    !/[A-ZÆØÅ]/.test(password) ||
+    !/\p{Ll}/u.test(password) ||
+    !/\p{Lu}/u.test(password) ||
     !/\d/.test(password)
   ) {
     return {
       ok: false,
       message:
-        "Adgangskoden skal indeholde små og store bogstaver samt mindst ét tal.",
+        "The password must include uppercase and lowercase letters plus at least one number.",
     };
   }
 
@@ -78,7 +78,7 @@ export function validateSignupInput(input: {
   if (displayName.length < 2 || displayName.length > 80) {
     return {
       ok: false,
-      message: "Skriv dit navn med mellem 2 og 80 tegn.",
+      message: "Enter a name between 2 and 80 characters.",
     };
   }
 
@@ -100,7 +100,7 @@ export function validateSignupInput(input: {
   ) {
     return {
       ok: false,
-      message: "De to adgangskoder er ikke ens.",
+      message: "The passwords don't match.",
     };
   }
 

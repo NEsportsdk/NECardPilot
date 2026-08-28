@@ -35,9 +35,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <AuthShell
-      title="Log ind"
-      description="Fortsæt til din samling, scanner, handler og portefølje."
-      footer="Din konto og dine kort er beskyttet af Supabase Auth og adgangskontrol pr. bruger."
+      title="Sign in"
+      description="Continue to your collection, scanner, transactions, and portfolio."
+      footer="Supabase Auth and per-user access controls protect your account and cards."
     >
       {errorMessage && (
         <div className={`${styles.notice} ${styles.noticeError}`} role="alert">
@@ -58,7 +58,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <input type="hidden" name="next" value={nextPath} />
 
         <label className={styles.field} htmlFor="email">
-          <span className={styles.fieldLabel}>E-mail</span>
+          <span className={styles.fieldLabel}>Email</span>
           <input
             className={styles.input}
             id="email"
@@ -73,7 +73,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </label>
 
         <label className={styles.field} htmlFor="password">
-          <span className={styles.fieldLabel}>Adgangskode</span>
+          <span className={styles.fieldLabel}>Password</span>
           <input
             className={styles.input}
             id="password"
@@ -84,15 +84,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           />
         </label>
 
-        <AuthSubmitButton label="Log ind" pendingLabel="Logger ind…" />
+        <AuthSubmitButton label="Sign in" pendingLabel="Signing in…" />
       </form>
 
-      <nav className={styles.actionLinks} aria-label="Kontohjælp">
+      <nav className={styles.actionLinks} aria-label="Account support">
         <Link className={styles.link} href={withNext("/signup", nextPath)}>
-          Opret konto
+          Create account
         </Link>
         <Link className={styles.link} href="/forgot-password">
-          Glemt adgangskode?
+          Forgot password?
         </Link>
       </nav>
     </AuthShell>

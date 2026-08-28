@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import VallectiveMark from "@/components/brand/VallectiveMark";
 import { createClient } from "@/lib/supabase/server";
 
 import styles from "./welcome.module.css";
@@ -8,27 +9,27 @@ import styles from "./welcome.module.css";
 const onboardingSteps = [
   {
     step: "01",
-    title: "Opret din samling",
+    title: "Create your collection",
     description:
-      "Start med PC eller inventory, så hvert kort får det rigtige hjem fra begyndelsen.",
+      "Start with a personal collection or dealer inventory, so every card has the right home from day one.",
     href: "/",
-    link: "Åbn dashboard",
+    link: "Open dashboard",
   },
   {
     step: "02",
-    title: "Scan dit første kort",
+    title: "Scan your first card",
     description:
-      "Brug kameraet til hurtigt at registrere kortet og fortsæt direkte til det næste.",
+      "Use your camera to capture the card quickly and move straight on to the next one.",
     href: "/scanner",
     link: "Start scanner",
   },
   {
     step: "03",
-    title: "Følg værdien",
+    title: "Track the value",
     description:
-      "Se samling, handler, grading og markedsdata samlet i én arbejdsgang.",
+      "Bring your collection, transactions, grading, and market data into one workflow.",
     href: "/cards",
-    link: "Se kortbibliotek",
+    link: "Open card library",
   },
 ] as const;
 
@@ -46,16 +47,18 @@ export default async function WelcomePage() {
   const displayName =
     typeof metadataName === "string" && metadataName.trim()
       ? metadataName.trim()
-      : user.email?.split("@")[0] ?? "samler";
+      : user.email?.split("@")[0] ?? "collector";
 
   return (
     <main className={styles.page}>
       <section className={styles.content}>
-        <p className={styles.eyebrow}>VELKOMMEN TIL VALLECTIVE</p>
-        <h1 className={styles.title}>Godt at have dig med, {displayName}.</h1>
+        <VallectiveMark className={styles.mark} />
+        <p className={styles.eyebrow}>WELCOME TO VALLECTIVE</p>
+        <h1 className={styles.title}>Great to have you here, {displayName}.</h1>
         <p className={styles.intro}>
-          Din konto er klar. På få minutter kan du oprette din første samling,
-          scanne et kort og begynde at følge hele kortets rejse.
+          Your account is ready. In just a few minutes, you can create your
+          first collection, scan a card, and start following its complete
+          journey.
         </p>
 
         <div className={styles.grid}>
@@ -72,7 +75,7 @@ export default async function WelcomePage() {
         </div>
 
         <Link className={styles.primaryLink} href="/">
-          Gå til Vallective
+          Enter Vallective
         </Link>
       </section>
     </main>
