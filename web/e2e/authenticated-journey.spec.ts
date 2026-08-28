@@ -204,16 +204,18 @@ test("scanner exposes rear-camera and photo-library capture on both card sides",
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
-test("regular collectors cannot read the private beta operations queue", async ({
+test("the dedicated beta operator can read the private operations queue", async ({
   page,
 }) => {
   const failures = monitorServerFailures(page);
-  await signIn(page, "/feedback");
+  await signIn(page, "/feedback/manage");
 
-  await page.goto("/feedback/manage", { waitUntil: "domcontentloaded" });
-  await expect(page).toHaveURL(/\/feedback$/);
+  await expect(page).toHaveURL(/\/feedback\/manage$/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Beta feedback" })
+    page.getByRole("heading", { level: 1, name: "Feedback command centre" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Feedback queue summary" })
   ).toBeVisible();
   expect(failures, failures.join("\n")).toEqual([]);
 });
