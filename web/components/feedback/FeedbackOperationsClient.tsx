@@ -223,7 +223,11 @@ export default function FeedbackOperationsClient({
             </p>
           </div>
 
-          <div className="coverage-metrics" aria-label="Pilot coverage summary">
+          <div
+            className="coverage-metrics"
+            role="region"
+            aria-label="Pilot coverage summary"
+          >
             <article>
               <span>Participants</span>
               <strong>{pilotMetrics.total}</strong>
