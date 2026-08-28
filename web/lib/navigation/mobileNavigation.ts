@@ -91,15 +91,20 @@ export function isMobileNavigationItemActive(
   pathname: string,
   item: MobileNavigationItem
 ) {
-  return item.matches(pathname);
+  return item.matches(pathname || "/");
 }
 
 export function isMobileMoreNavigationActive(pathname: string) {
-  return mobileMoreNavigation.some((item) => item.matches(pathname));
+  const currentPathname = pathname || "/";
+
+  return mobileMoreNavigation.some((item) => item.matches(currentPathname));
 }
 
 export function shouldShowMobileNavigation(pathname: string) {
+  const currentPathname = pathname || "/";
+
   return !mobileNavigationExcludedRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
+    (route) =>
+      currentPathname === route || currentPathname.startsWith(`${route}/`)
   );
 }

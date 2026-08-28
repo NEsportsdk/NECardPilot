@@ -1086,7 +1086,7 @@ export default function ScannerPage() {
                     Boolean(rapidIntakeReadinessError)
                   }
                 >
-                  <span>◎</span>
+                  <span aria-hidden="true">◎</span>
                   Start scanner
                 </button>
               </section>

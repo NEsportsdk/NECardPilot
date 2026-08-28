@@ -48,3 +48,14 @@ jobs:
 
       - name: Verify authenticated production journey
         run: npm run e2e:production
+
+      - name: Upload Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: authenticated-journey-debug-${{ github.run_attempt }}
+          path: |
+            web/playwright-report
+            web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
