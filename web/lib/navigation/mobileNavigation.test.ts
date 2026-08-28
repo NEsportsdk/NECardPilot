@@ -3,11 +3,18 @@ import { describe, expect, it } from "vitest";
 import {
   isMobileMoreNavigationActive,
   isMobileNavigationItemActive,
+  mobileNavigationPathnameFromSegment,
   mobilePrimaryNavigation,
   shouldShowMobileNavigation,
 } from "@/lib/navigation/mobileNavigation";
 
 describe("mobile navigation", () => {
+  it("maps the root layout segment to the home pathname", () => {
+    expect(mobileNavigationPathnameFromSegment(null)).toBe("/");
+    expect(mobileNavigationPathnameFromSegment("scanner")).toBe("/scanner");
+    expect(mobileNavigationPathnameFromSegment("auth")).toBe("/auth");
+  });
+
   it("matches primary routes and their detail pages", () => {
     const cards = mobilePrimaryNavigation.find(
       (item) => item.label === "Cards"
