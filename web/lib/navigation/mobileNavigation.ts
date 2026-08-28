@@ -87,6 +87,10 @@ const mobileNavigationExcludedRoutes = [
   "/signup",
 ];
 
+export function mobileNavigationPathnameFromSegment(segment: string | null) {
+  return segment ? `/${segment}` : "/";
+}
+
 export function isMobileNavigationItemActive(
   pathname: string,
   item: MobileNavigationItem

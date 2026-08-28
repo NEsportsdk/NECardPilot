@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSelectedLayoutSegment } from "next/navigation";
 import {
   useEffect,
   useRef,
@@ -11,12 +12,12 @@ import {
 import {
   isMobileMoreNavigationActive,
   isMobileNavigationItemActive,
+  mobileNavigationPathnameFromSegment,
   mobileMoreNavigation,
   mobilePrimaryNavigation,
   shouldShowMobileNavigation,
   type MobileNavigationIcon,
 } from "@/lib/navigation/mobileNavigation";
-import { useResolvedPathname } from "@/lib/navigation/useResolvedPathname";
 
 function subscribeToConnectivity(onChange: () => void) {
   window.addEventListener("online", onChange);
@@ -120,7 +121,9 @@ function NavigationIcon({ icon }: { icon: MobileNavigationIcon }) {
 }
 
 export default function MobileNavigation() {
-  const pathname = useResolvedPathname();
+  const pathname = mobileNavigationPathnameFromSegment(
+    useSelectedLayoutSegment()
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
