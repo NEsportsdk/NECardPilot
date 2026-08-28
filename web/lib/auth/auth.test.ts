@@ -140,6 +140,15 @@ describe("auth route classification", () => {
     expect(isPublicRoute("/twitter-image")).toBe(true);
   });
 
+  it("keeps Vercel observability assets and ingestion endpoints public", () => {
+    expect(isPublicRoute("/_vercel/insights/script.js")).toBe(true);
+    expect(isPublicRoute("/c2c51b1bdd6a144a/script.js")).toBe(true);
+    expect(isPublicRoute("/c2c51b1bdd6a144a/view")).toBe(true);
+    expect(isPublicRoute("/d24fe9315a3bb930/vitals")).toBe(true);
+    expect(isPublicRoute("/c2c51b1bdd6a144a/cards")).toBe(false);
+    expect(isPublicRoute("/not-a-hash/script.js")).toBe(false);
+  });
+
   it("keeps app routes protected", () => {
     expect(isPublicRoute("/cards")).toBe(false);
   });
