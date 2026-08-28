@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Confirm your email for Vallective</title>
+  </head>
+  <body style="margin:0;background:#080a10;color:#f8fafc;font-family:Arial,sans-serif">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0">
+      Confirm your email to finish creating your secure Vallective account.
+    </div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#080a10">
+      <tr>
+        <td align="center" style="padding:32px 16px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;border:1px solid #292d39;border-radius:24px;background:#11131c">
+            <tr>
+              <td style="padding:36px 32px">
+                <p style="margin:0 0 20px;color:#a99dfd;font-size:13px;font-weight:700;letter-spacing:3px">VALLECTIVE</p>
+                <h1 style="margin:0;color:#f8fafc;font-size:30px;line-height:1.15">Confirm your email</h1>
+                <p style="margin:18px 0 0;color:#a8afbd;font-size:16px;line-height:1.6">
+                  Confirm this address to finish creating your secure Vallective account.
+                </p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:28px">
+                  <tr>
+                    <td align="center" style="border-radius:13px;background:#765ce8">
+                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup&amp;next=%2Fwelcome" style="display:block;padding:16px 20px;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none">Confirm account</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:22px 0 0;color:#747d90;font-size:13px;line-height:1.55">
+                  This secure link expires shortly and can only be used once. If you did not create a Vallective account, you can ignore this email.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

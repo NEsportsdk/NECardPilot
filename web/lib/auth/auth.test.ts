@@ -7,6 +7,12 @@ import {
   validatePassword,
   validateSignupInput,
 } from "./forms";
+import {
+  getAuthSecret,
+  getConfirmationCopy,
+  getConfirmationFallbackPath,
+  getEmailOtpType,
+} from "./confirmation";
 import { getAuthRedirectOrigin, getSafeNextPath } from "./redirects";
 import { isGuestOnlyRoute, isPublicRoute } from "./routes";
 
@@ -96,6 +102,30 @@ describe("auth redirects", () => {
     expect(
       getAuthRedirectOrigin({ NEXT_PUBLIC_SITE_URL: "javascript:alert(1)" })
     ).toBe("http://localhost:3000");
+  });
+});
+
+describe("auth link confirmation", () => {
+  it("accepts supported one-time-password types", () => {
+    expect(getEmailOtpType("signup")).toBe("signup");
+    expect(getEmailOtpType("recovery")).toBe("recovery");
+    expect(getEmailOtpType("unsupported")).toBeNull();
+  });
+
+  it("rejects missing or unreasonably large auth secrets", () => {
+    expect(getAuthSecret(" token-hash ")).toBe("token-hash");
+    expect(getAuthSecret(" ")).toBeNull();
+    expect(getAuthSecret("x".repeat(2049))).toBeNull();
+  });
+
+  it("routes recovery links to password change", () => {
+    expect(getConfirmationFallbackPath("recovery")).toBe(
+      "/change-password"
+    );
+    expect(getConfirmationFallbackPath("signup")).toBe("/welcome");
+    expect(getConfirmationCopy("recovery").buttonLabel).toBe(
+      "Continue to password reset"
+    );
   });
 });
 

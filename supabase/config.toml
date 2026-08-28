@@ -241,7 +241,17 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
+# Scanner-resistant links land on Vallective and are only consumed after an
+# explicit form submission. Keep the hosted templates in sync with these files.
+[auth.email.template.confirmation]
+subject = "Confirm your email for Vallective"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Vallective password"
+content_path = "./supabase/templates/recovery.html"
+
+# Uncomment to customize additional email templates
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
