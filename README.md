@@ -64,6 +64,13 @@ npm run check
 requests og pushes til `main`: typecheck, lint, automatiske tests og et fuldt
 produktionsbuild.
 
+Den autentificerede Playwright-rejse er en separat, read-only releasekontrol.
+Den logger ind med en dedikeret Supabase-testkonto og gennemgår kerneområderne
+i både desktop- og mobilprofil uden at oprette, redigere eller slette kortdata.
+Opsætning og kommandoer er beskrevet i `web/README.md`; GitHub-workflowet
+`Authenticated journey` kan startes manuelt, når secrets `E2E_EMAIL` og
+`E2E_PASSWORD` er oprettet.
+
 Vercel Web Analytics og Speed Insights er indbygget i root-layoutet. Uventede
 serverfejl logges som strukturerede JSON-events via Next.js instrumentation, og
 appens error boundaries viser en sikker fejlreference til brugeren.
