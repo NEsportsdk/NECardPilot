@@ -85,6 +85,12 @@ miljødata og må ikke hardcodes med mail eller bruger-id i repositoryet.
 Real-device-pilotens testmatrix og exitkriterier ligger i
 [`docs/beta-pilot.md`](docs/beta-pilot.md).
 
+Den kontrollerede pilot styres fra `/beta`. Her vælger testeren en bred
+enheds-, browser- og installationstype og gemmer fremdriften gennem den guidede
+10-punkts brugerrejse. Betaadministratoren ser kun denne begrænsede dækning og
+fremdrift sammen med beslutningskøen på `/feedback/manage`; der indsamles ingen
+hardware-id'er eller fulde user agents.
+
 ## Deployment
 
 Ved opsætning på Vercel skal Root Directory være `web`. De fire variabler fra

@@ -110,6 +110,13 @@ function NavigationIcon({ icon }: { icon: MobileNavigationIcon }) {
           <path d="M8 9h8M8 12.5h5" />
         </svg>
       );
+    case "beta":
+      return (
+        <svg {...commonProps}>
+          <path d="M7 4.5h10M8 3v3M16 3v3M5 7.5h14v12H5z" />
+          <path d="m8.5 12 2 2 5-5" />
+        </svg>
+      );
     case "settings":
       return (
         <svg {...commonProps}>

@@ -182,6 +182,10 @@ const checks = [
   ],
   ["protected Home redirect", () => expectProtectedRedirect(baseUrl, "/", "/")],
   [
+    "protected beta pilot redirect",
+    () => expectProtectedRedirect(baseUrl, "/beta", "/beta"),
+  ],
+  [
     "protected route destination",
     () =>
       expectProtectedRedirect(

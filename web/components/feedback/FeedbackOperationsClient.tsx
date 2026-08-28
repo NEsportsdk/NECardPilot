@@ -11,6 +11,11 @@ import {
 import { updateBetaFeedbackAction } from "@/app/feedback/manage/actions";
 import AppSidebar from "@/components/app/AppSidebar";
 import {
+  getBetaPilotMetrics,
+  getBetaPilotProgress,
+  type BetaPilotProfile,
+} from "@/lib/beta/betaPilot";
+import {
   betaFeedbackPriorities,
   betaFeedbackStatuses,
   getBetaFeedbackQueueMetrics,
@@ -44,6 +49,18 @@ const priorityLabels: Record<BetaFeedbackPriority, string> = {
 
 type FeedbackOperationsClientProps = {
   initialFeedback: BetaFeedbackQueueItem[];
+  initialParticipants: BetaPilotProfile[];
+};
+
+const pilotDeviceLabels: Record<BetaPilotProfile["primary_device"], string> = {
+  android: "Android",
+  desktop: "Desktop",
+  iphone: "iPhone",
+};
+
+const pilotInstallLabels: Record<BetaPilotProfile["install_mode"], string> = {
+  browser: "Browser",
+  standalone: "Installed",
 };
 
 function formatDate(value: string) {
@@ -65,6 +82,7 @@ function shortReporterId(value: string) {
 
 export default function FeedbackOperationsClient({
   initialFeedback,
+  initialParticipants,
 }: FeedbackOperationsClientProps) {
   const [feedback, setFeedback] = useState(initialFeedback);
   const [selectedId, setSelectedId] = useState(initialFeedback[0]?.id ?? null);
@@ -91,9 +109,13 @@ export default function FeedbackOperationsClient({
   );
   const [isPending, startTransition] = useTransition();
 
-  const metrics = useMemo(
+  const feedbackMetrics = useMemo(
     () => getBetaFeedbackQueueMetrics(feedback),
     [feedback]
+  );
+  const pilotMetrics = useMemo(
+    () => getBetaPilotMetrics(initialParticipants),
+    [initialParticipants]
   );
 
   const filteredFeedback = useMemo(
@@ -179,30 +201,102 @@ export default function FeedbackOperationsClient({
             </p>
           </div>
 
-          <Link className="back-link" href="/feedback">
-            ← Feedback form
-          </Link>
+          <div className="header-actions">
+            <Link className="pilot-link" href="/beta">
+              Open pilot journey →
+            </Link>
+            <Link className="back-link" href="/feedback">
+              ← Feedback form
+            </Link>
+          </div>
         </header>
+
+        <section className="pilot-coverage" aria-labelledby="pilot-coverage-title">
+          <div className="coverage-heading">
+            <div>
+              <p className="eyebrow">Real-device coverage</p>
+              <h2 id="pilot-coverage-title">Pilot participants</h2>
+            </div>
+            <p>
+              Privacy-conscious progress by account ID, device class and launch
+              mode. Contact details remain in consented feedback only.
+            </p>
+          </div>
+
+          <div className="coverage-metrics" aria-label="Pilot coverage summary">
+            <article>
+              <span>Participants</span>
+              <strong>{pilotMetrics.total}</strong>
+            </article>
+            <article>
+              <span>Journey complete</span>
+              <strong>{pilotMetrics.completed}</strong>
+            </article>
+            <article>
+              <span>Mobile coverage</span>
+              <strong>{pilotMetrics.mobile}</strong>
+            </article>
+            <article>
+              <span>Installed app</span>
+              <strong>{pilotMetrics.installed}</strong>
+            </article>
+          </div>
+
+          {initialParticipants.length ? (
+            <div className="participant-list">
+              {initialParticipants.map((participant) => {
+                const progress = getBetaPilotProgress(
+                  participant.completed_steps
+                );
+
+                return (
+                  <article className="participant-card" key={participant.user_id}>
+                    <div className="participant-identity">
+                      <span>{shortReporterId(participant.user_id)}</span>
+                      <strong>{progress.percent}% complete</strong>
+                    </div>
+                    <div className="participant-progress" aria-hidden="true">
+                      <span style={{ width: `${progress.percent}%` }} />
+                    </div>
+                    <div className="participant-context">
+                      <span>{pilotDeviceLabels[participant.primary_device]}</span>
+                      <span>{participant.browser}</span>
+                      <span>{pilotInstallLabels[participant.install_mode]}</span>
+                      <time dateTime={participant.updated_at}>
+                        {formatDate(participant.updated_at)}
+                      </time>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="coverage-empty">
+              No pilot participants yet. The first save from <code>/beta</code>
+              will appear here.
+            </div>
+          )}
+        </section>
 
         <section className="metrics-grid" aria-label="Feedback queue summary">
           <article>
             <span>Total reports</span>
-            <strong>{metrics.total}</strong>
+            <strong>{feedbackMetrics.total}</strong>
             <small>Latest 100 reports</small>
           </article>
           <article>
             <span>Needs action</span>
-            <strong>{metrics.actionable}</strong>
+            <strong>{feedbackMetrics.actionable}</strong>
             <small>New or under review</small>
           </article>
           <article>
             <span>Critical</span>
-            <strong>{metrics.critical}</strong>
+            <strong>{feedbackMetrics.critical}</strong>
             <small>Immediate attention</small>
           </article>
           <article>
             <span>Follow-up ready</span>
-            <strong>{metrics.followUpAllowed}</strong>
+            <strong>{feedbackMetrics.followUpAllowed}</strong>
             <small>Collector consent recorded</small>
           </article>
         </section>
@@ -459,6 +553,7 @@ export default function FeedbackOperationsClient({
         }
 
         .operations-header,
+        .pilot-coverage,
         .metrics-grid,
         .filters-panel,
         .operations-grid {
@@ -506,6 +601,169 @@ export default function FeedbackOperationsClient({
           text-decoration: none;
           white-space: nowrap;
         }
+
+        .header-actions {
+          display: grid;
+          justify-items: end;
+          gap: 11px;
+          flex: 0 0 auto;
+        }
+
+        .pilot-link {
+          min-height: 39px;
+          display: inline-flex;
+          align-items: center;
+          padding: 0 13px;
+          border: 1px solid rgba(167, 139, 250, 0.24);
+          border-radius: 11px;
+          background: rgba(124, 92, 255, 0.08);
+          color: #cfc7ff;
+          font-size: 10px;
+          font-weight: 780;
+          text-decoration: none;
+        }
+
+        .pilot-coverage {
+          margin-bottom: 14px;
+          padding: 20px;
+          border: 1px solid rgba(167, 139, 250, 0.16);
+          border-radius: 20px;
+          background:
+            linear-gradient(125deg, rgba(124, 92, 255, 0.07), transparent 48%),
+            rgba(14, 17, 25, 0.94);
+        }
+
+        .coverage-heading {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 16px;
+        }
+
+        .coverage-heading h2 {
+          margin: 0;
+          color: #eef0f5;
+          font-size: 22px;
+          letter-spacing: -0.035em;
+        }
+
+        .coverage-heading > p {
+          max-width: 470px;
+          margin: 0;
+          color: #687185;
+          font-size: 9px;
+          line-height: 1.55;
+          text-align: right;
+        }
+
+        .coverage-metrics {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+
+        .coverage-metrics article {
+          padding: 13px;
+          border: 1px solid rgba(148, 163, 184, 0.08);
+          border-radius: 13px;
+          background: rgba(255, 255, 255, 0.018);
+        }
+
+        .coverage-metrics span {
+          display: block;
+          color: #657084;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .coverage-metrics strong {
+          display: block;
+          margin-top: 6px;
+          color: #f2f3f7;
+          font-size: 20px;
+        }
+
+        .participant-list {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .participant-card {
+          min-width: 0;
+          padding: 13px;
+          border: 1px solid rgba(148, 163, 184, 0.08);
+          border-radius: 13px;
+          background: rgba(7, 9, 14, 0.38);
+        }
+
+        .participant-identity,
+        .participant-context {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .participant-identity span {
+          color: #9199aa;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 9px;
+        }
+
+        .participant-identity strong {
+          color: #c9c2ff;
+          font-size: 9px;
+        }
+
+        .participant-progress {
+          height: 4px;
+          margin: 10px 0;
+          overflow: hidden;
+          border-radius: 999px;
+          background: rgba(148, 163, 184, 0.09);
+        }
+
+        .participant-progress span {
+          display: block;
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, #7867ed, #a99eff);
+        }
+
+        .participant-context {
+          justify-content: flex-start;
+          flex-wrap: wrap;
+          color: #667084;
+          font-size: 8px;
+          text-transform: capitalize;
+        }
+
+        .participant-context span:not(:last-of-type)::after {
+          margin-left: 10px;
+          color: #323949;
+          content: "·";
+        }
+
+        .participant-context time {
+          margin-left: auto;
+          color: #515a6d;
+        }
+
+        .coverage-empty {
+          padding: 16px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.018);
+          color: #687185;
+          font-size: 9px;
+          text-align: center;
+        }
+
+        .coverage-empty code { color: #aaa2de; }
 
         .metrics-grid {
           display: grid;
@@ -910,6 +1168,7 @@ export default function FeedbackOperationsClient({
 
         @media (max-width: 1120px) {
           .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .participant-list { grid-template-columns: 1fr; }
           .operations-grid { grid-template-columns: 1fr; }
           .queue-list { max-height: 430px; }
         }
@@ -923,6 +1182,11 @@ export default function FeedbackOperationsClient({
         @media (max-width: 640px) {
           .operations-main { padding: 27px 13px 112px; }
           .operations-header { align-items: flex-start; flex-direction: column; }
+          .header-actions { justify-items: start; }
+          .pilot-coverage { padding: 17px; }
+          .coverage-heading { align-items: flex-start; flex-direction: column; }
+          .coverage-heading > p { text-align: left; }
+          .coverage-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .metrics-grid,
           .filters-panel,
           .workflow-grid { grid-template-columns: 1fr; }

@@ -35,6 +35,11 @@ const routeExpectations: RouteExpectation[] = [
     navigationLabel: "Analytics",
   },
   {
+    pathname: "/beta",
+    heading: "Your pilot journey",
+    navigationLabel: "Beta pilot",
+  },
+  {
     pathname: "/feedback",
     heading: "Beta feedback",
     navigationLabel: "Beta feedback",
@@ -216,6 +221,9 @@ test("the dedicated beta operator can read the private operations queue", async 
   ).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Feedback queue summary" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Pilot coverage summary" })
   ).toBeVisible();
   expect(failures, failures.join("\n")).toEqual([]);
 });

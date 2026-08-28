@@ -1,8 +1,9 @@
 # Vallective real-device beta pilot
 
-M15-piloten skal bevise, at de vigtigste samlerflows fungerer på rigtige
-enheder, og at hver observation ender som en prioriteret beslutning i
-`/feedback/manage`.
+M16-piloten skal bevise, at de vigtigste samlerflows fungerer på rigtige
+enheder, og at hver observation ender som en prioriteret beslutning. Testerne
+registrerer enhed og fremdrift i `/beta`; betaadministratoren følger dækning og
+feedback i `/feedback/manage`.
 
 ## Pilotgruppe
 
@@ -38,6 +39,11 @@ feedbacksiden.
 9. Installer appen, luk den helt og åbn den igen fra hjemmeskærmen.
 10. Send mindst én konkret rapport fra den side, hvor friktionen opstod.
 
+Hvert punkt markeres i `/beta` og gemmes på testerens egen konto. Pilotsporet
+gemmer kun en bred enhedsgruppe, browsergruppe, browser/installeret tilstand og
+de gennemførte punktnumre. Det gemmer ikke hardware-id, fuld user agent,
+kortdata eller browserhistorik.
+
 ## Prioritering
 
 | Prioritet | Betydning | Reaktion |
@@ -61,6 +67,7 @@ handling – ikke kopiere private brugerdata.
 - Ingen ukontrollerede 5xx-fejl i Vercel under pilotperioden.
 - Mindst 80 % af pilottestene vurderer kerneoplevelsen til 4 eller 5.
 - Hver rapport i køen har en status, prioritet og – når nødvendig – intern note.
+- Pilotoversigten viser mindst én gennemført mobilrejse i installeret tilstand.
 
 Når kriterierne er opfyldt, kan Vallective gå fra kontrolleret pilot til en
 større invitation-only beta.
