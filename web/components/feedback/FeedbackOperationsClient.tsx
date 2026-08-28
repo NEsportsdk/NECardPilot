@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   useDeferredValue,
   useMemo,
@@ -50,6 +51,7 @@ const priorityLabels: Record<BetaFeedbackPriority, string> = {
 type FeedbackOperationsClientProps = {
   initialFeedback: BetaFeedbackQueueItem[];
   initialParticipants: BetaPilotProfile[];
+  invitationConsole: ReactNode;
 };
 
 const pilotDeviceLabels: Record<BetaPilotProfile["primary_device"], string> = {
@@ -83,6 +85,7 @@ function shortReporterId(value: string) {
 export default function FeedbackOperationsClient({
   initialFeedback,
   initialParticipants,
+  invitationConsole,
 }: FeedbackOperationsClientProps) {
   const [feedback, setFeedback] = useState(initialFeedback);
   const [selectedId, setSelectedId] = useState(initialFeedback[0]?.id ?? null);
@@ -210,6 +213,8 @@ export default function FeedbackOperationsClient({
             </Link>
           </div>
         </header>
+
+        {invitationConsole}
 
         <section className="pilot-coverage" aria-labelledby="pilot-coverage-title">
           <div className="coverage-heading">
