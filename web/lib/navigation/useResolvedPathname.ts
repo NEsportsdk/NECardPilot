@@ -1,33 +1,17 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { resolveNavigationPathname } from "@/lib/navigation/pathname";
 
-function subscribeToBrowserPathname(onChange: () => void) {
-  window.addEventListener("popstate", onChange);
-
-  return () => {
-    window.removeEventListener("popstate", onChange);
-  };
-}
-
-function getBrowserPathnameSnapshot() {
-  return window.location.pathname || "/";
-}
-
-function getServerPathnameSnapshot() {
-  return null;
-}
-
 export function useResolvedPathname() {
   const routerPathname = usePathname();
-  const browserPathname = useSyncExternalStore(
-    subscribeToBrowserPathname,
-    getBrowserPathnameSnapshot,
-    getServerPathnameSnapshot
-  );
+  const [browserPathname, setBrowserPathname] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBrowserPathname(window.location.pathname || "/");
+  }, [routerPathname]);
 
   return resolveNavigationPathname(browserPathname, routerPathname);
 }
