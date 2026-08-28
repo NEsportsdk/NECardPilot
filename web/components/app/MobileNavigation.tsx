@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   useEffect,
   useRef,
@@ -17,6 +16,7 @@ import {
   shouldShowMobileNavigation,
   type MobileNavigationIcon,
 } from "@/lib/navigation/mobileNavigation";
+import { useResolvedPathname } from "@/lib/navigation/useResolvedPathname";
 
 function subscribeToConnectivity(onChange: () => void) {
   window.addEventListener("online", onChange);
@@ -120,7 +120,7 @@ function NavigationIcon({ icon }: { icon: MobileNavigationIcon }) {
 }
 
 export default function MobileNavigation() {
-  const pathname = usePathname();
+  const pathname = useResolvedPathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);

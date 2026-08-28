@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import AuthenticatedUserCard, {
   type UserIdentity,
 } from "@/components/auth/AuthenticatedUserCard";
 import VallectiveMark from "@/components/brand/VallectiveMark";
+import { useResolvedPathname } from "@/lib/navigation/useResolvedPathname";
 
 type AppSidebarVariant =
   | "rail"
@@ -85,7 +85,7 @@ export default function AppSidebar({
   onLogout,
   variant = "grid",
 }: AppSidebarProps) {
-  const pathname = usePathname();
+  const pathname = useResolvedPathname();
   const settingsActive =
     pathname.startsWith("/settings") || pathname.startsWith("/change-password");
 
