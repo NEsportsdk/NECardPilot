@@ -20,6 +20,7 @@ Krav:
 - npm
 - adgang til det relevante Supabase-projekt
 - en OpenAI API-nøgle til AI-funktionerne
+- en Resend API-nøgle og verificeret afsender til pilotinvitationer
 
 Kopiér miljøskabelonen og udfyld værdierne lokalt:
 
@@ -91,10 +92,22 @@ enheds-, browser- og installationstype og gemmer fremdriften gennem den guidede
 fremdrift sammen med beslutningskøen på `/feedback/manage`; der indsamles ingen
 hardware-id'er eller fulde user agents.
 
+Betaadministratoren kan sende forventede, en-til-en-pilotinvitationer fra
+`/feedback/manage`. Modtagerens adresse og samtykkebekræftelse gemmes i den
+adminbeskyttede `beta_pilot_invitations`-tabel. Afsendelsen bruger Resend med en
+deterministisk idempotency key, så en teknisk retry ikke sender dubletter.
+`Sent` betyder, at Resend har accepteret anmodningen; levering eller åbning
+antages ikke uden verificerede provider-events.
+
 ## Deployment
 
-Ved opsætning på Vercel skal Root Directory være `web`. De fire variabler fra
+Ved opsætning på Vercel skal Root Directory være `web`. Variablerne fra
 `web/.env.example` skal oprettes i Vercel uden at committe deres værdier.
+
+`RESEND_EMAIL_DOMAIN` skal være et domæne, der er verificeret i Resend; appen
+sender som `Vallective <pilot@domænet>`. `RESEND_FROM_EMAIL` kan bruges som en
+valgfri, fuld override af afsenderen. `RESEND_REPLY_TO_EMAIL` skal være en
+overvåget indbakke og er påkrævet, før en pilotinvitation kan sendes.
 
 `NEXT_PUBLIC_SITE_URL` skal være `https://vallective.com` i production.
 Supabase Auth skal samtidig tillade `http://localhost:3000/**`, production-

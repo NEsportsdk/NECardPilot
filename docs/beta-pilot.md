@@ -1,6 +1,6 @@
 # Vallective real-device beta pilot
 
-M16-piloten skal bevise, at de vigtigste samlerflows fungerer på rigtige
+M17-piloten skal bevise, at de vigtigste samlerflows fungerer på rigtige
 enheder, og at hver observation ender som en prioriteret beslutning. Testerne
 registrerer enhed og fremdrift i `/beta`; betaadministratoren følger dækning og
 feedback i `/feedback/manage`.
@@ -12,6 +12,10 @@ feedback i `/feedback/manage`.
 - Testdata må gerne være realistiske, men aldrig indeholde adgangskoder,
   betalingsoplysninger eller andre personers private data.
 - Feedback med opfølgning må kun kontaktes, når samtykket er markeret.
+- Pilotinvitationer sendes én ad gangen fra `/feedback/manage` og kun til en
+  samler, der forventer invitationen. Admin bekræfter dette før hver afsendelse.
+- En fejlet invitation må genforsøges fra samme auditpost; en allerede afsendt
+  adresse inviteres ikke automatisk igen.
 
 ## Enhedsmatrix
 

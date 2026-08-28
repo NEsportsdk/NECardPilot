@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 
 import FeedbackOperationsClient from "@/components/feedback/FeedbackOperationsClient";
+import PilotInvitationConsole from "@/components/feedback/PilotInvitationConsole";
 import type { BetaPilotProfile } from "@/lib/beta/betaPilot";
+import type { BetaPilotInvitation } from "@/lib/beta/betaPilotInvitation";
+import { isBetaPilotEmailConfigured } from "@/lib/email/sendBetaPilotInvitation";
 import type { BetaFeedbackQueueItem } from "@/lib/feedback/betaFeedbackAdmin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,33 +29,56 @@ export default async function FeedbackOperationsPage() {
     redirect("/feedback");
   }
 
-  const [feedbackResult, participantsResult] = await Promise.all([
-    supabase
-      .from("beta_feedback")
-      .select(
-        "id,user_id,category,experience_rating,message,page_path,screen_class,language,is_online,is_standalone,allow_follow_up,contact_email,status,priority,internal_note,reviewed_at,created_at,updated_at"
-      )
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(100),
-    supabase
-      .from("beta_pilot_participants")
-      .select(
-        "user_id,primary_device,browser,install_mode,completed_steps,joined_at,updated_at"
-      )
-      .order("updated_at", { ascending: false })
-      .limit(100),
-  ]);
+  const [feedbackResult, participantsResult, invitationsResult] =
+    await Promise.all([
+      supabase
+        .from("beta_feedback")
+        .select(
+          "id,user_id,category,experience_rating,message,page_path,screen_class,language,is_online,is_standalone,allow_follow_up,contact_email,status,priority,internal_note,reviewed_at,created_at,updated_at"
+        )
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(100),
+      supabase
+        .from("beta_pilot_participants")
+        .select(
+          "user_id,primary_device,browser,install_mode,completed_steps,joined_at,updated_at"
+        )
+        .order("updated_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("beta_pilot_invitations")
+        .select(
+          "id,email,status,send_attempts,resend_email_id,last_error_code,consent_confirmed_at,invited_by,sent_at,created_at,updated_at"
+        )
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(100),
+    ]);
 
-  if (feedbackResult.error || participantsResult.error) {
-    throw feedbackResult.error ?? participantsResult.error;
+  if (
+    feedbackResult.error ||
+    participantsResult.error ||
+    invitationsResult.error
+  ) {
+    throw (
+      feedbackResult.error ??
+      participantsResult.error ??
+      invitationsResult.error
+    );
   }
 
   return (
     <FeedbackOperationsClient
       initialFeedback={(feedbackResult.data ?? []) as BetaFeedbackQueueItem[]}
-      initialParticipants={
-        (participantsResult.data ?? []) as BetaPilotProfile[]
+      initialParticipants={(participantsResult.data ?? []) as BetaPilotProfile[]}
+      invitationConsole={
+        <PilotInvitationConsole
+          emailReady={isBetaPilotEmailConfigured()}
+          initialInvitations={
+            (invitationsResult.data ?? []) as BetaPilotInvitation[]
+          }
+        />
       }
     />
   );
