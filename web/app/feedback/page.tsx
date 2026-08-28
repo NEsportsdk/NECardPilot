@@ -2,7 +2,7 @@
 
 import { track } from "@vercel/analytics";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import AppSidebar from "@/components/app/AppSidebar";
 import {
@@ -11,6 +11,7 @@ import {
   type BetaFeedbackCategory,
   type BetaFeedbackDeviceContext,
 } from "@/lib/feedback/betaFeedback";
+import { createClient } from "@/lib/supabase/client";
 
 const categoryLabels: Record<BetaFeedbackCategory, string> = {
   bug: "Something is broken",
@@ -38,6 +39,7 @@ function getDeviceContext(): BetaFeedbackDeviceContext {
 }
 
 export default function FeedbackPage() {
+  const supabase = useMemo(() => createClient(), []);
   const [category, setCategory] = useState<BetaFeedbackCategory>("idea");
   const [experienceRating, setExperienceRating] = useState<number | null>(null);
   const [message, setMessage] = useState("");
@@ -45,6 +47,29 @@ export default function FeedbackPage() {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<"error" | "idle" | "success">("idle");
   const [statusMessage, setStatusMessage] = useState("");
+  const [canManageFeedback, setCanManageFeedback] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadAdminMembership() {
+      const { data } = await supabase
+        .from("beta_feedback_admins")
+        .select("user_id")
+        .limit(1)
+        .maybeSingle();
+
+      if (isActive) {
+        setCanManageFeedback(Boolean(data));
+      }
+    }
+
+    void loadAdminMembership();
+
+    return () => {
+      isActive = false;
+    };
+  }, [supabase]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -121,9 +146,16 @@ export default function FeedbackPage() {
             </p>
           </div>
 
-          <Link className="back-link" href="/">
-            ← Back to dashboard
-          </Link>
+          <div className="header-actions">
+            {canManageFeedback ? (
+              <Link className="operations-link" href="/feedback/manage">
+                Open beta operations →
+              </Link>
+            ) : null}
+            <Link className="back-link" href="/">
+              ← Back to dashboard
+            </Link>
+          </div>
         </header>
 
         <div className="feedback-grid">
@@ -311,6 +343,32 @@ export default function FeedbackPage() {
           font-size: 12px;
           font-weight: 700;
           text-decoration: none;
+        }
+
+        .header-actions {
+          display: grid;
+          justify-items: end;
+          gap: 12px;
+        }
+
+        .operations-link {
+          min-height: 39px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 13px;
+          border: 1px solid rgba(167, 139, 250, 0.24);
+          border-radius: 11px;
+          background: rgba(124, 92, 255, 0.08);
+          color: #cfc7ff;
+          font-size: 10px;
+          font-weight: 780;
+          text-decoration: none;
+        }
+
+        .operations-link:hover {
+          border-color: rgba(167, 139, 250, 0.48);
+          color: #ffffff;
         }
 
         .back-link:hover {
@@ -603,6 +661,16 @@ export default function FeedbackPage() {
           .feedback-header {
             align-items: flex-start;
             flex-direction: column;
+          }
+
+          .header-actions {
+            width: 100%;
+            justify-items: stretch;
+          }
+
+          .operations-link,
+          .back-link {
+            justify-content: flex-start;
           }
 
           .feedback-panel {

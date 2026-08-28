@@ -79,6 +79,11 @@ Indloggede betatestere kan sende struktureret feedback fra `/feedback`.
 Indsendelsen gemmer kategori, oplevelsesscore, besked og en begrænset teknisk
 kontekst uden kortdata, browserhistorik eller URL-queryparametre. Tabellen er
 beskyttet med RLS og giver kun brugeren adgang til at indsende egne rapporter.
+Udpegede betaadministratorer kan behandle rapporterne på
+`/feedback/manage`; medlemskabet ligger i `beta_feedback_admins` som
+miljødata og må ikke hardcodes med mail eller bruger-id i repositoryet.
+Real-device-pilotens testmatrix og exitkriterier ligger i
+[`docs/beta-pilot.md`](docs/beta-pilot.md).
 
 ## Deployment
 
