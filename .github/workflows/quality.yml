@@ -41,3 +41,14 @@ jobs:
 
       - name: Run quality gate
         run: npm run check
+
+      - name: Run beta smoke gate
+        shell: bash
+        run: |
+          npm run start -- --hostname 127.0.0.1 --port 3000 > /tmp/vallective-next.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          npm run smoke -- --base-url http://127.0.0.1:3000 || {
+            cat /tmp/vallective-next.log
+            exit 1
+          }

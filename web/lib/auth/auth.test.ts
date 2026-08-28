@@ -24,6 +24,10 @@ describe("auth form validation", () => {
     expect(validatePassword("SecurePassword9").ok).toBe(true);
   });
 
+  it("accepts international uppercase and lowercase letters", () => {
+    expect(validatePassword("ÉÉÉÉÉÉéééééé9").ok).toBe(true);
+  });
+
   it("rejects mismatched passwords", () => {
     const result = validateSignupInput({
       displayName: "Niels",

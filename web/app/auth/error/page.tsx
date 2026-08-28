@@ -6,24 +6,24 @@ import AuthShell from "@/components/auth/AuthShell";
 export default function AuthErrorPage() {
   return (
     <AuthShell
-      title="Linket kunne ikke bruges"
-      description="Bekræftelseslinket er udløbet, allerede brugt eller ikke længere gyldigt."
-      footer="Hvis problemet fortsætter, kan du anmode om et nyt link eller prøve at logge ind igen."
+      title="We couldn't use that link"
+      description="The confirmation link has expired, has already been used, or is no longer valid."
+      footer="If the problem continues, request a new link or try signing in again."
     >
       <div className={`${styles.notice} ${styles.noticeError}`} role="alert">
-        Din konto er ikke ændret. Start flowet igen for at få et nyt, sikkert
-        link.
+        Your account wasn&apos;t changed. Start the flow again to receive a
+        new, secure link.
       </div>
 
-      <nav className={styles.actionLinks} aria-label="Kontohjælp">
+      <nav className={styles.actionLinks} aria-label="Account support">
         <Link className={styles.link} href="/forgot-password">
-          Nulstil adgangskode
+          Request a new password
         </Link>
         <Link className={styles.link} href="/signup">
-          Opret konto igen
+          Create account
         </Link>
         <Link className={styles.link} href="/login">
-          Gå til login
+          Go to sign in
         </Link>
       </nav>
     </AuthShell>

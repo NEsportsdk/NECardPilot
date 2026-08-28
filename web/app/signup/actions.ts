@@ -64,8 +64,8 @@ export async function signup(formData: FormData) {
     });
 
     const message = normalizedMessage.includes("too many requests")
-      ? "Der er sendt for mange forespørgsler. Vent et øjeblik og prøv igen."
-      : "Kontoen kunne ikke oprettes lige nu. Prøv igen om lidt.";
+      ? "Too many requests. Wait a moment and try again."
+      : "We couldn't create your account right now. Try again shortly.";
 
     redirect(signupUrl(nextPath, { error: message }));
   }

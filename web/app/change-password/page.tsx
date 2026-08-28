@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import VallectiveMark from "@/components/brand/VallectiveMark";
 import { validatePassword } from "@/lib/auth/forms";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,7 +25,7 @@ function getReadableError(error: unknown) {
     return error.message;
   }
 
-  return "Adgangskoden kunne ikke ændres. Prøv igen.";
+  return "We couldn't change your password. Try again.";
 }
 
 function requiresReauthentication(message: string) {
@@ -95,7 +96,7 @@ export default function ChangePasswordPage() {
       setShowNonceField(true);
       setMessage({
         tone: "info",
-        text: "En 6-cifret sikkerhedskode er sendt til din email. Indtast koden nedenfor og gem adgangskoden igen.",
+        text: "A six-digit security code has been sent to your email. Enter it below, then save your password again.",
       });
     } catch (error) {
       setMessage({
@@ -124,7 +125,7 @@ export default function ChangePasswordPage() {
     if (password !== confirmPassword) {
       setMessage({
         tone: "error",
-        text: "De to adgangskoder er ikke ens.",
+        text: "The passwords don't match.",
       });
       return;
     }
@@ -132,7 +133,7 @@ export default function ChangePasswordPage() {
     if (showNonceField && !/^\d{6}$/.test(nonce.trim())) {
       setMessage({
         tone: "error",
-        text: "Indtast den 6-cifrede sikkerhedskode fra emailen.",
+        text: "Enter the six-digit security code from your email.",
       });
       return;
     }
@@ -156,7 +157,7 @@ export default function ChangePasswordPage() {
           setShowNonceField(true);
           setMessage({
             tone: "info",
-            text: "Din session er ældre end Supabase tillader til en direkte passwordændring. Klik på ‘Send 6-cifret kode’, og prøv igen med koden fra emailen.",
+            text: "Your session is too old for a direct password change. Select ‘Send six-digit code’, then try again with the code from your email.",
           });
           return;
         }
@@ -170,7 +171,7 @@ export default function ChangePasswordPage() {
       setShowNonceField(false);
       setMessage({
         tone: "success",
-        text: "Adgangskoden er ændret. Du kan nu bruge den på alle dine enheder.",
+        text: "Your password has been changed and now works across all your devices.",
       });
     } catch (error) {
       setMessage({
@@ -187,7 +188,7 @@ export default function ChangePasswordPage() {
       <main className="password-page">
         <section className="password-card password-loading">
           <span className="spinner" />
-          <p>Kontrollerer din aktive session...</p>
+          <p>Checking your active session...</p>
         </section>
 
         <style jsx>{styles}</style>
@@ -199,40 +200,43 @@ export default function ChangePasswordPage() {
     <main className="password-page">
       <section className="password-card">
         <header>
+          <div className="brand-mark">
+            <VallectiveMark />
+          </div>
           <span className="eyebrow">ACCOUNT SECURITY</span>
-          <h1>Vælg en ny adgangskode</h1>
+          <h1>Choose a new password</h1>
           <p>
-            Vælg en stærk adgangskode. Hvis du kom fra et nulstillingslink,
-            har Supabase allerede oprettet en sikker, midlertidig session.
+            Choose a strong password. If you arrived from a reset link,
+            Supabase has already created a secure temporary session.
           </p>
         </header>
 
         <div className="account-row">
-          <span>LOGGET IND SOM</span>
-          <strong>{email || "Ukendt email"}</strong>
+          <span>SIGNED IN AS</span>
+          <strong>{email || "Unknown email"}</strong>
         </div>
 
         <form onSubmit={handleSubmit}>
           <label>
-            <span>Ny adgangskode</span>
+            <span>New password</span>
             <input
               type="password"
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Mindst 12 tegn"
+              placeholder="At least 12 characters"
               disabled={isSaving}
             />
           </label>
 
           <label>
-            <span>Gentag ny adgangskode</span>
+            <span>Confirm new password</span>
             <input
               type="password"
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Skriv den samme kode igen"
+              placeholder="Enter the same password again"
               disabled={isSaving}
             />
           </label>
@@ -240,10 +244,10 @@ export default function ChangePasswordPage() {
           {showNonceField && (
             <div className="reauth-section">
               <div>
-                <strong>Ekstra sikkerhedskontrol</strong>
+                <strong>Additional security check</strong>
                 <p>
-                  Der kan kræves en emailkode, hvis din nuværende session er
-                  for gammel til en direkte adgangskodeændring.
+                  An email code may be required when your current session is
+                  too old for a direct password change.
                 </p>
               </div>
 
@@ -253,11 +257,11 @@ export default function ChangePasswordPage() {
                 onClick={() => void sendReauthenticationCode()}
                 disabled={isSendingCode || isSaving}
               >
-                {isSendingCode ? "Sender kode..." : "Send 6-cifret kode"}
+                {isSendingCode ? "Sending code..." : "Send six-digit code"}
               </button>
 
               <label className="nonce-field">
-                <span>Sikkerhedskode</span>
+                <span>Security code</span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -282,7 +286,7 @@ export default function ChangePasswordPage() {
 
           <div className="actions">
             <Link href="/" className="cancel-link">
-              Tilbage til Home
+              Back to Home
             </Link>
 
             <button
@@ -290,14 +294,14 @@ export default function ChangePasswordPage() {
               type="submit"
               disabled={isSaving}
             >
-              {isSaving ? "Ændrer adgangskode..." : "Gem ny adgangskode"}
+              {isSaving ? "Changing password..." : "Save new password"}
             </button>
           </div>
         </form>
 
         <p className="privacy-note">
-          Adgangskoden vises eller gemmes ikke i Vallective. Den sendes direkte
-          til Supabase Auth.
+          Vallective never displays or stores your password. It is sent
+          directly to Supabase Auth.
         </p>
       </section>
 
@@ -334,6 +338,24 @@ const styles = `
     justify-content: center;
     gap: 13px;
     color: #9299aa;
+  }
+
+  .brand-mark {
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 20px;
+    padding: 9px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, #8b5cf6, #6d5ce7);
+    color: #ffffff;
+    box-shadow: 0 12px 28px rgba(124, 92, 255, 0.24);
+  }
+
+  .brand-mark :global(svg) {
+    width: 100%;
+    height: 100%;
   }
 
   .spinner {

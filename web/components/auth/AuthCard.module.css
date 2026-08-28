@@ -22,13 +22,12 @@
 .logo {
   width: 54px;
   height: 54px;
-  display: grid;
-  place-items: center;
+  display: block;
+  box-sizing: border-box;
+  padding: 10px;
   border-radius: 16px;
   background: linear-gradient(135deg, #8b5cf6, #6d5ce7);
   color: #ffffff;
-  font-size: 23px;
-  font-weight: 850;
   box-shadow: 0 12px 30px rgba(124, 92, 255, 0.28);
 }
 
