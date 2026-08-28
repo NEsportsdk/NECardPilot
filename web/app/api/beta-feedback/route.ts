@@ -41,6 +41,7 @@ export async function POST(request: Request) {
     const { error } = await supabase.from("beta_feedback").insert({
       allow_follow_up: feedback.allowFollowUp,
       category: feedback.category,
+      contact_email: feedback.allowFollowUp ? (user.email ?? null) : null,
       experience_rating: feedback.experienceRating,
       is_online: feedback.deviceContext.online,
       is_standalone: feedback.deviceContext.standalone,
