@@ -21,6 +21,16 @@ describe("mobile navigation", () => {
     expect(isMobileNavigationItemActive("/scanner", cards!)).toBe(false);
   });
 
+  it("treats an empty initial App Router pathname as the home route", () => {
+    const home = mobilePrimaryNavigation.find(
+      (item) => item.label === "Home"
+    );
+
+    expect(home).toBeDefined();
+    expect(isMobileNavigationItemActive("", home!)).toBe(true);
+    expect(shouldShowMobileNavigation("")).toBe(true);
+  });
+
   it("marks the overflow entry active for secondary workspaces", () => {
     expect(isMobileMoreNavigationActive("/grading/submission-1")).toBe(true);
     expect(isMobileMoreNavigationActive("/analytics")).toBe(true);
