@@ -125,6 +125,7 @@ export default function MobileNavigation() {
     useSelectedLayoutSegment()
   );
   const [menuOpen, setMenuOpen] = useState(false);
+  const [interactionReady, setInteractionReady] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLElement>(null);
@@ -133,6 +134,10 @@ export default function MobileNavigation() {
     getConnectivitySnapshot,
     getServerConnectivitySnapshot
   );
+
+  useEffect(() => {
+    setInteractionReady(true);
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -295,6 +300,7 @@ export default function MobileNavigation() {
             className={`mobile-navigation-link ${
               moreActive || menuOpen ? "mobile-navigation-link-active" : ""
             }`}
+            disabled={!interactionReady}
             onClick={() => setMenuOpen((current) => !current)}
             ref={moreButtonRef}
             type="button"
