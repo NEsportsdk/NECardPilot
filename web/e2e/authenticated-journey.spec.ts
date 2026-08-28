@@ -35,6 +35,11 @@ const routeExpectations: RouteExpectation[] = [
     navigationLabel: "Analytics",
   },
   {
+    pathname: "/feedback",
+    heading: "Beta feedback",
+    navigationLabel: "Beta feedback",
+  },
+  {
     pathname: "/settings",
     heading: "Settings",
     navigationLabel: "Settings",

@@ -75,6 +75,11 @@ Vercel Web Analytics og Speed Insights er indbygget i root-layoutet. Uventede
 serverfejl logges som strukturerede JSON-events via Next.js instrumentation, og
 appens error boundaries viser en sikker fejlreference til brugeren.
 
+Indloggede betatestere kan sende struktureret feedback fra `/feedback`.
+Indsendelsen gemmer kategori, oplevelsesscore, besked og en begrænset teknisk
+kontekst uden kortdata, browserhistorik eller URL-queryparametre. Tabellen er
+beskyttet med RLS og giver kun brugeren adgang til at indsende egne rapporter.
+
 ## Deployment
 
 Ved opsætning på Vercel skal Root Directory være `web`. De fire variabler fra

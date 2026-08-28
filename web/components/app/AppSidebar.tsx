@@ -6,6 +6,7 @@ import AuthenticatedUserCard, {
   type UserIdentity,
 } from "@/components/auth/AuthenticatedUserCard";
 import VallectiveMark from "@/components/brand/VallectiveMark";
+import { getBetaFeedbackHref } from "@/lib/feedback/betaFeedback";
 import { useResolvedPathname } from "@/lib/navigation/useResolvedPathname";
 
 type AppSidebarVariant =
@@ -78,6 +79,12 @@ const navigation: NavigationItem[] = [
     href: "/analytics",
     matches: (pathname) => pathname.startsWith("/analytics"),
   },
+  {
+    label: "Beta feedback",
+    icon: "✦",
+    href: "/feedback",
+    matches: (pathname) => pathname.startsWith("/feedback"),
+  },
 ];
 
 export default function AppSidebar({
@@ -108,12 +115,16 @@ export default function AppSidebar({
 
           {navigation.map((item) => {
             const active = item.matches(pathname);
+            const href =
+              item.href === "/feedback"
+                ? getBetaFeedbackHref(pathname)
+                : item.href;
 
             return (
               <Link
                 aria-current={active ? "page" : undefined}
                 className={`navigation-item ${active ? "navigation-item-active" : ""}`}
-                href={item.href}
+                href={href}
                 key={item.label}
                 title={item.label}
               >
