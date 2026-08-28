@@ -7,6 +7,12 @@ import {
   validatePassword,
   validateSignupInput,
 } from "./forms";
+import {
+  getAuthSecret,
+  getConfirmationCopy,
+  getConfirmationFallbackPath,
+  getEmailOtpType,
+} from "./confirmation";
 import { getAuthRedirectOrigin, getSafeNextPath } from "./redirects";
 import { isGuestOnlyRoute, isPublicRoute } from "./routes";
 
@@ -99,6 +105,30 @@ describe("auth redirects", () => {
   });
 });
 
+describe("auth link confirmation", () => {
+  it("accepts supported one-time-password types", () => {
+    expect(getEmailOtpType("signup")).toBe("signup");
+    expect(getEmailOtpType("recovery")).toBe("recovery");
+    expect(getEmailOtpType("unsupported")).toBeNull();
+  });
+
+  it("rejects missing or unreasonably large auth secrets", () => {
+    expect(getAuthSecret(" token-hash ")).toBe("token-hash");
+    expect(getAuthSecret(" ")).toBeNull();
+    expect(getAuthSecret("x".repeat(2049))).toBeNull();
+  });
+
+  it("routes recovery links to password change", () => {
+    expect(getConfirmationFallbackPath("recovery")).toBe(
+      "/change-password"
+    );
+    expect(getConfirmationFallbackPath("signup")).toBe("/welcome");
+    expect(getConfirmationCopy("recovery").buttonLabel).toBe(
+      "Continue to password reset"
+    );
+  });
+});
+
 describe("auth route classification", () => {
   it("keeps callbacks public", () => {
     expect(isPublicRoute("/auth/confirm")).toBe(true);
@@ -108,6 +138,15 @@ describe("auth route classification", () => {
     expect(isPublicRoute("/manifest.webmanifest")).toBe(true);
     expect(isPublicRoute("/opengraph-image")).toBe(true);
     expect(isPublicRoute("/twitter-image")).toBe(true);
+  });
+
+  it("keeps Vercel observability assets and ingestion endpoints public", () => {
+    expect(isPublicRoute("/_vercel/insights/script.js")).toBe(true);
+    expect(isPublicRoute("/c2c51b1bdd6a144a/script.js")).toBe(true);
+    expect(isPublicRoute("/c2c51b1bdd6a144a/view")).toBe(true);
+    expect(isPublicRoute("/d24fe9315a3bb930/vitals")).toBe(true);
+    expect(isPublicRoute("/c2c51b1bdd6a144a/cards")).toBe(false);
+    expect(isPublicRoute("/not-a-hash/script.js")).toBe(false);
   });
 
   it("keeps app routes protected", () => {
