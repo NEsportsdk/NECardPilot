@@ -18,6 +18,7 @@ import {
   shouldShowMobileNavigation,
   type MobileNavigationIcon,
 } from "@/lib/navigation/mobileNavigation";
+import { getBetaFeedbackHref } from "@/lib/feedback/betaFeedback";
 
 function subscribeToConnectivity(onChange: () => void) {
   window.addEventListener("online", onChange);
@@ -100,6 +101,13 @@ function NavigationIcon({ icon }: { icon: MobileNavigationIcon }) {
       return (
         <svg {...commonProps}>
           <path d="M4 19.5h16M6.5 17V11M12 17V5M17.5 17V8.5" />
+        </svg>
+      );
+    case "feedback":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 5.5h16v11H9l-5 4v-15Z" />
+          <path d="M8 9h8M8 12.5h5" />
         </svg>
       );
     case "settings":
@@ -244,6 +252,10 @@ export default function MobileNavigation() {
             <div className="more-navigation-grid">
               {mobileMoreNavigation.map((item) => {
                 const active = isMobileNavigationItemActive(pathname, item);
+                const href =
+                  item.href === "/feedback"
+                    ? getBetaFeedbackHref(pathname)
+                    : item.href;
 
                 return (
                   <Link
@@ -251,7 +263,7 @@ export default function MobileNavigation() {
                     className={`more-navigation-link ${
                       active ? "more-navigation-link-active" : ""
                     }`}
-                    href={item.href}
+                    href={href}
                     key={item.label}
                     onClick={() => setMenuOpen(false)}
                   >

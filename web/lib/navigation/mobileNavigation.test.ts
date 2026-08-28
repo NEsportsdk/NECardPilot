@@ -41,6 +41,7 @@ describe("mobile navigation", () => {
   it("marks the overflow entry active for secondary workspaces", () => {
     expect(isMobileMoreNavigationActive("/grading/submission-1")).toBe(true);
     expect(isMobileMoreNavigationActive("/analytics")).toBe(true);
+    expect(isMobileMoreNavigationActive("/feedback")).toBe(true);
     expect(isMobileMoreNavigationActive("/cards")).toBe(false);
   });
 
