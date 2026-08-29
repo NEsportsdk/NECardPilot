@@ -87,10 +87,16 @@ Real-device-pilotens testmatrix og exitkriterier ligger i
 [`docs/beta-pilot.md`](docs/beta-pilot.md).
 
 Den kontrollerede pilot styres fra `/beta`. Her vælger testeren en bred
-enheds-, browser- og installationstype og gemmer fremdriften gennem den guidede
-10-punkts brugerrejse. Betaadministratoren ser kun denne begrænsede dækning og
-fremdrift sammen med beslutningskøen på `/feedback/manage`; der indsamles ingen
-hardware-id'er eller fulde user agents.
+enheds- og browsertype, mens appen automatisk registrerer, om det aktuelle
+vindue kører i browseren eller fra hjemmeskærmen. Fremdriften gemmes gennem den
+guidede 10-punkts brugerrejse. Betaadministratoren ser kun denne begrænsede
+dækning og fremdrift sammen med beslutningskøen på `/feedback/manage`; der
+indsamles ingen hardware-id'er eller fulde user agents.
+
+Vallective har et webmanifest, platformstilpassede installationsinstruktioner
+og en service worker med en scriptfri offline-fallback. Service workeren cacher
+kun den statiske fallbackside – aldrig autentificerede sider, API-svar,
+kortbilleder eller private samlingsdata.
 
 Betaadministratoren kan sende forventede, en-til-en-pilotinvitationer fra
 `/feedback/manage`. Modtagerens adresse og samtykkebekræftelse gemmes i den

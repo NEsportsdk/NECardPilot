@@ -5,7 +5,9 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/auth",
   "/_vercel",
   "/manifest.webmanifest",
+  "/offline.html",
   "/opengraph-image",
+  "/sw.js",
   "/twitter-image",
 ] as const;
 

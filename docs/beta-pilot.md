@@ -30,6 +30,22 @@ Notér enhedsmodel, OS/browser-version, skærmprofil og om appen var installeret
 Vallective registrerer selv kun den begrænsede kontekst, der beskrives på
 feedbacksiden.
 
+### Verificér installation og offline-fallback
+
+1. Åbn **Settings** i Vallective og følg den viste installationsvejledning.
+2. På iPhone bruges Safari: **Del** → **Føj til hjemmeskærm** → **Tilføj**.
+3. På Android bruges Chrome: browsermenuen → **Installér app** eller
+   **Føj til startskærm** → bekræft.
+4. Luk browserfanen, start Vallective fra det nye ikon og åbn `/beta`.
+5. Kontrollér, at **Launch mode** automatisk viser **Installed on home screen**,
+   før pilotfremdriften gemmes igen.
+6. Efter mindst én online-indlæsning slås forbindelsen fra, og testeren
+   navigerer i appen. Vallective skal vise den brandede **You are offline**-side
+   uden private samlingsdata. Forbind igen og vælg **Try again**.
+
+Hvis launch mode fortsat viser browser, skal testeren kontrollere, at appen blev
+åbnet fra hjemmeskærmsikonet og ikke fra en eksisterende browserfane.
+
 ## Guidet brugerrejse
 
 1. Opret konto, bekræft mail og log ind igen.

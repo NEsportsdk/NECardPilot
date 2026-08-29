@@ -61,6 +61,12 @@ export function InstallExperienceProvider({
   useEffect(() => {
     const displayMode = window.matchMedia("(display-mode: standalone)");
 
+    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+      void navigator.serviceWorker
+        .register("/sw.js", { scope: "/" })
+        .catch(() => undefined);
+    }
+
     function refreshEnvironment() {
       setEnvironment(readEnvironment());
       setReady(true);
