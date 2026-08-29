@@ -12,6 +12,10 @@ import {
 import { updateBetaFeedbackAction } from "@/app/feedback/manage/actions";
 import AppSidebar from "@/components/app/AppSidebar";
 import {
+  getBetaLaunchReadiness,
+  type BetaPilotCoverageCheck,
+} from "@/lib/beta/betaLaunchReadiness";
+import {
   getBetaPilotMetrics,
   getBetaPilotProgress,
   type BetaPilotProfile,
@@ -49,6 +53,7 @@ const priorityLabels: Record<BetaFeedbackPriority, string> = {
 };
 
 type FeedbackOperationsClientProps = {
+  initialCoverageChecks: BetaPilotCoverageCheck[];
   initialFeedback: BetaFeedbackQueueItem[];
   initialParticipants: BetaPilotProfile[];
   invitationConsole: ReactNode;
@@ -83,6 +88,7 @@ function shortReporterId(value: string) {
 }
 
 export default function FeedbackOperationsClient({
+  initialCoverageChecks,
   initialFeedback,
   initialParticipants,
   invitationConsole,
@@ -119,6 +125,10 @@ export default function FeedbackOperationsClient({
   const pilotMetrics = useMemo(
     () => getBetaPilotMetrics(initialParticipants),
     [initialParticipants]
+  );
+  const launchReadiness = useMemo(
+    () => getBetaLaunchReadiness(initialCoverageChecks, feedback),
+    [feedback, initialCoverageChecks]
   );
 
   const filteredFeedback = useMemo(
@@ -215,6 +225,42 @@ export default function FeedbackOperationsClient({
         </header>
 
         {invitationConsole}
+
+        <section
+          className="launch-readiness"
+          aria-labelledby="launch-readiness-title"
+          data-status={launchReadiness.status}
+        >
+          <div className="readiness-heading">
+            <div>
+              <p className="eyebrow">Public beta release gate</p>
+              <h2 id="launch-readiness-title">Launch readiness</h2>
+              <p>
+                Evidence survives later device tests, while feedback decisions
+                update this gate immediately.
+              </p>
+            </div>
+            <div className="readiness-score" aria-live="polite">
+              <span>{launchReadiness.status === "ready" ? "Go" : "Hold"}</span>
+              <strong>
+                {launchReadiness.met}/{launchReadiness.total}
+              </strong>
+              <small>gates complete</small>
+            </div>
+          </div>
+
+          <div className="readiness-gates" role="list">
+            {launchReadiness.gates.map((gate) => (
+              <article data-met={gate.met} key={gate.id} role="listitem">
+                <span aria-hidden="true">{gate.met ? "✓" : "○"}</span>
+                <div>
+                  <strong>{gate.label}</strong>
+                  <p>{gate.detail}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <section className="pilot-coverage" aria-labelledby="pilot-coverage-title">
           <div className="coverage-heading">
@@ -562,6 +608,7 @@ export default function FeedbackOperationsClient({
         }
 
         .operations-header,
+        .launch-readiness,
         .pilot-coverage,
         .metrics-grid,
         .filters-panel,
@@ -640,6 +687,118 @@ export default function FeedbackOperationsClient({
           background:
             linear-gradient(125deg, rgba(124, 92, 255, 0.07), transparent 48%),
             rgba(14, 17, 25, 0.94);
+        }
+
+        .launch-readiness {
+          margin-bottom: 14px;
+          padding: 22px;
+          border: 1px solid rgba(251, 191, 36, 0.18);
+          border-radius: 20px;
+          background:
+            linear-gradient(125deg, rgba(245, 158, 11, 0.07), transparent 48%),
+            rgba(14, 17, 25, 0.96);
+        }
+
+        .launch-readiness[data-status="ready"] {
+          border-color: rgba(52, 211, 153, 0.22);
+          background:
+            linear-gradient(125deg, rgba(16, 185, 129, 0.07), transparent 48%),
+            rgba(14, 17, 25, 0.96);
+        }
+
+        .readiness-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 17px;
+        }
+
+        .readiness-heading h2 {
+          margin: 0;
+          color: #f1f3f7;
+          font-size: 24px;
+          letter-spacing: -0.04em;
+        }
+
+        .readiness-heading > div:first-child > p:last-child {
+          max-width: 620px;
+          margin: 8px 0 0;
+          color: #6f788b;
+          font-size: 9px;
+          line-height: 1.55;
+        }
+
+        .readiness-score {
+          flex: 0 0 auto;
+          display: grid;
+          grid-template-columns: auto auto;
+          align-items: center;
+          column-gap: 9px;
+          min-width: 118px;
+          padding: 12px 14px;
+          border: 1px solid rgba(251, 191, 36, 0.16);
+          border-radius: 14px;
+          background: rgba(245, 158, 11, 0.055);
+        }
+
+        [data-status="ready"] .readiness-score {
+          border-color: rgba(52, 211, 153, 0.18);
+          background: rgba(16, 185, 129, 0.055);
+        }
+
+        .readiness-score span {
+          color: #fcd34d;
+          font-size: 9px;
+          font-weight: 850;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+
+        [data-status="ready"] .readiness-score span { color: #6ee7b7; }
+        .readiness-score strong { color: #fff; font-size: 19px; }
+        .readiness-score small {
+          grid-column: 1 / -1;
+          margin-top: 3px;
+          color: #646d7f;
+          font-size: 8px;
+        }
+
+        .readiness-gates {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .readiness-gates article {
+          display: grid;
+          grid-template-columns: 22px minmax(0, 1fr);
+          gap: 9px;
+          padding: 13px;
+          border: 1px solid rgba(148, 163, 184, 0.08);
+          border-radius: 13px;
+          background: rgba(7, 9, 14, 0.4);
+        }
+
+        .readiness-gates article[data-met="true"] {
+          border-color: rgba(52, 211, 153, 0.14);
+          background: rgba(16, 185, 129, 0.035);
+        }
+
+        .readiness-gates article > span {
+          color: #788195;
+          font-size: 17px;
+          line-height: 1;
+        }
+
+        .readiness-gates article[data-met="true"] > span { color: #6ee7b7; }
+        .readiness-gates strong { color: #c7ccd7; font-size: 10px; }
+        .readiness-gates article[data-met="true"] strong { color: #b7f7dc; }
+        .readiness-gates p {
+          margin: 5px 0 0;
+          color: #616a7d;
+          font-size: 8px;
+          line-height: 1.5;
         }
 
         .coverage-heading {
@@ -1176,6 +1335,7 @@ export default function FeedbackOperationsClient({
         .empty-state p { margin: 0; font-size: 9px; line-height: 1.55; }
 
         @media (max-width: 1120px) {
+          .readiness-gates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .participant-list { grid-template-columns: 1fr; }
           .operations-grid { grid-template-columns: 1fr; }
@@ -1192,6 +1352,10 @@ export default function FeedbackOperationsClient({
           .operations-main { padding: 27px 13px 112px; }
           .operations-header { align-items: flex-start; flex-direction: column; }
           .header-actions { justify-items: start; }
+          .launch-readiness { padding: 17px; }
+          .readiness-heading { flex-direction: column; }
+          .readiness-score { width: 100%; }
+          .readiness-gates { grid-template-columns: 1fr; }
           .pilot-coverage { padding: 17px; }
           .coverage-heading { align-items: flex-start; flex-direction: column; }
           .coverage-heading > p { text-align: left; }

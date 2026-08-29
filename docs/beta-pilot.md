@@ -61,8 +61,10 @@ Hvis launch mode fortsat viser browser, skal testeren kontrollere, at appen blev
 
 Hvert punkt markeres i `/beta` og gemmes på testerens egen konto. Pilotsporet
 gemmer kun en bred enhedsgruppe, browsergruppe, browser/installeret tilstand og
-de gennemførte punktnumre. Det gemmer ikke hardware-id, fuld user agent,
-kortdata eller browserhistorik.
+de gennemførte punktnumre. Når alle ti trin er gennemført, bevares et minimalt
+coverage check for den testede kombination. Det gør, at en senere test på en ny
+platform ikke overskriver tidligere verifikation. Sporet gemmer ikke
+hardware-id, fuld user agent, kortdata eller browserhistorik.
 
 ## Prioritering
 
@@ -78,6 +80,19 @@ Status bruges konsekvent: `New` → `Reviewing` → `Planned` → `Resolved` ell
 handling – ikke kopiere private brugerdata.
 
 ## Exitkriterier
+
+Launch readiness på `/feedback/manage` viser **Hold**, indtil alle seks
+automatiske gates er grønne:
+
+1. Mindst én komplet 10-punkts rejse er bevaret.
+2. En installeret iPhone-rejse er gennemført.
+3. En installeret Android-rejse er gennemført.
+4. En desktop-browserrejse er gennemført.
+5. Alle rapporter er flyttet ud af `New`.
+6. Ingen uafsluttede High- eller Critical-rapporter er tilbage.
+
+De automatiske gates suppleres af følgende manuelle drifts- og
+kvalitetskontroller:
 
 - Ingen åbne Critical-rapporter.
 - Alle High-rapporter har en ejer eller en dokumenteret produktbeslutning.

@@ -93,6 +93,12 @@ guidede 10-punkts brugerrejse. Betaadministratoren ser kun denne begrænsede
 dækning og fremdrift sammen med beslutningskøen på `/feedback/manage`; der
 indsamles ingen hardware-id'er eller fulde user agents.
 
+Når alle ti trin er gennemført, bevarer Vallective et minimalt coverage check
+for kombinationen af enhedsgruppe, browsergruppe og installationstype. Senere
+tests overskriver derfor ikke tidligere iPhone-, Android- eller desktopbeviser.
+Launch readiness på `/feedback/manage` samler disse beviser med feedbackkøen i
+seks automatiske go/hold-kriterier for den offentlige beta.
+
 Vallective har et webmanifest, platformstilpassede installationsinstruktioner
 og en service worker med en scriptfri offline-fallback. Service workeren cacher
 kun den statiske fallbackside – aldrig autentificerede sider, API-svar,
