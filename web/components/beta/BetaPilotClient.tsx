@@ -6,10 +6,10 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { saveBetaPilotAction } from "@/app/beta/actions";
 import AppSidebar from "@/components/app/AppSidebar";
+import { useInstallExperience } from "@/components/pwa/InstallExperienceProvider";
 import {
   betaPilotBrowsers,
   betaPilotDevices,
-  betaPilotInstallModes,
   betaPilotJourney,
   getBetaPilotProgress,
   type BetaPilotBrowser,
@@ -74,17 +74,6 @@ function detectBrowser(): BetaPilotBrowser {
   return "other";
 }
 
-function detectInstallMode(): BetaPilotInstallMode {
-  const navigatorWithStandalone = navigator as Navigator & {
-    standalone?: boolean;
-  };
-
-  return window.matchMedia("(display-mode: standalone)").matches ||
-    navigatorWithStandalone.standalone
-    ? "standalone"
-    : "browser";
-}
-
 export default function BetaPilotClient({
   canManagePilot,
   initialProfile,
@@ -96,9 +85,6 @@ export default function BetaPilotClient({
   const [browser, setBrowser] = useState<BetaPilotBrowser>(
     initialProfile?.browser ?? "chrome"
   );
-  const [installMode, setInstallMode] = useState<BetaPilotInstallMode>(
-    initialProfile?.install_mode ?? "browser"
-  );
   const [completedSteps, setCompletedSteps] = useState<BetaPilotStepId[]>(
     initialProfile?.completed_steps ?? []
   );
@@ -107,6 +93,15 @@ export default function BetaPilotClient({
     "success"
   );
   const [isPending, startTransition] = useTransition();
+  const {
+    environment: currentInstallEnvironment,
+    ready: installEnvironmentReady,
+  } = useInstallExperience();
+  const installMode: BetaPilotInstallMode = installEnvironmentReady
+    ? currentInstallEnvironment === "installed"
+      ? "standalone"
+      : "browser"
+    : initialProfile?.install_mode ?? "browser";
 
   useEffect(() => {
     if (initialProfile) {
@@ -115,7 +110,6 @@ export default function BetaPilotClient({
 
     setPrimaryDevice(detectDevice());
     setBrowser(detectBrowser());
-    setInstallMode(detectInstallMode());
   }, [initialProfile]);
 
   const progress = useMemo(
@@ -264,22 +258,19 @@ export default function BetaPilotClient({
                 </select>
               </label>
 
-              <label>
+              <div className="context-field">
                 <span>Launch mode</span>
-                <select
-                  disabled={isPending}
-                  onChange={(event) =>
-                    setInstallMode(event.target.value as BetaPilotInstallMode)
-                  }
-                  value={installMode}
+                <output
+                  aria-live="polite"
+                  className="detected-value"
+                  data-installed={installMode === "standalone"}
                 >
-                  {betaPilotInstallModes.map((value) => (
-                    <option key={value} value={value}>
-                      {installModeLabels[value]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  {installEnvironmentReady
+                    ? installModeLabels[installMode]
+                    : "Checking this window…"}
+                </output>
+                <small>Detected automatically from this app window.</small>
+              </div>
             </div>
 
             <div className="context-note">
@@ -288,6 +279,30 @@ export default function BetaPilotClient({
                 We store only these broad choices and your checklist progress.
                 No hardware identifier, full user agent or card data is attached.
               </p>
+            </div>
+
+            <div
+              className={`install-readiness ${
+                installMode === "standalone" ? "install-readiness-complete" : ""
+              }`}
+            >
+              <div>
+                <strong>
+                  {installMode === "standalone"
+                    ? "Installed-app mode detected"
+                    : "Complete the installed-app checkpoint"}
+                </strong>
+                <p>
+                  {installMode === "standalone"
+                    ? "This save will verify that Vallective was reopened from its home-screen icon."
+                    : "Open the install guide, add Vallective to your home screen, then reopen it from the new icon before saving again."}
+                </p>
+              </div>
+              {installMode === "standalone" ? (
+                <span aria-label="Installation verified">✓</span>
+              ) : (
+                <Link href="/settings">Open install guide →</Link>
+              )}
             </div>
           </section>
 
@@ -557,6 +572,7 @@ export default function BetaPilotClient({
           margin-top: 23px;
         }
 
+        .context-field > span:first-child,
         label > span:first-child { display: block; margin-bottom: 7px; color: #7f889b; font-size: 9px; font-weight: 750; }
 
         select {
@@ -569,6 +585,32 @@ export default function BetaPilotClient({
           color: #d7dbe4;
           font: inherit;
           font-size: 10px;
+        }
+
+        .detected-value {
+          width: 100%;
+          min-height: 45px;
+          display: flex;
+          align-items: center;
+          padding: 0 12px;
+          border: 1px solid rgba(148, 163, 184, 0.13);
+          border-radius: 11px;
+          background: #0b0e15;
+          color: #d7dbe4;
+          font-size: 10px;
+        }
+
+        .detected-value[data-installed="true"] {
+          border-color: rgba(52, 211, 153, 0.25);
+          color: #a7f3d0;
+        }
+
+        .context-field small {
+          display: block;
+          margin-top: 7px;
+          color: #5f6879;
+          font-size: 8px;
+          line-height: 1.45;
         }
 
         select:focus-visible,
@@ -592,6 +634,33 @@ export default function BetaPilotClient({
 
         .context-note > span { color: #8b7bff; }
         .context-note p { margin: 0; font-size: 9px; line-height: 1.6; }
+
+        .install-readiness {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          margin-top: 13px;
+          padding: 14px;
+          border: 1px solid rgba(167, 139, 250, 0.16);
+          border-radius: 13px;
+          background: rgba(124, 92, 255, 0.055);
+        }
+
+        .install-readiness-complete {
+          border-color: rgba(52, 211, 153, 0.2);
+          background: rgba(16, 185, 129, 0.055);
+        }
+
+        .install-readiness strong {
+          color: #d9d5ff;
+          font-size: 10px;
+        }
+
+        .install-readiness-complete strong { color: #a7f3d0; }
+        .install-readiness p { margin: 5px 0 0; color: #747d90; font-size: 9px; line-height: 1.55; }
+        .install-readiness a { flex: 0 0 auto; color: #b9adff; font-size: 9px; font-weight: 800; }
+        .install-readiness > span { color: #6ee7b7; font-size: 20px; }
 
         .discipline-panel h2 { margin-bottom: 19px; }
         .discipline-panel ul { display: grid; gap: 10px; margin: 0 0 21px; padding: 0; list-style: none; }
@@ -692,6 +761,7 @@ export default function BetaPilotClient({
           .progress-ring span { font-size: 16px; }
           .pilot-panel, .journey-section { padding: 19px; border-radius: 19px; }
           .context-fields { grid-template-columns: 1fr; }
+          .install-readiness { align-items: flex-start; flex-direction: column; }
           .journey-heading > p { text-align: left; }
           .journey-step { align-items: flex-end; grid-template-columns: 1fr; }
           .journey-step > a { margin-left: 52px; }

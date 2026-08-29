@@ -164,6 +164,64 @@ async function expectManifest(baseUrl) {
   );
 }
 
+async function expectServiceWorker(baseUrl) {
+  const response = await request(baseUrl, "/sw.js");
+  const contentType = response.headers.get("content-type") ?? "";
+  const cacheControl = response.headers.get("cache-control") ?? "";
+  const contentSecurityPolicy =
+    response.headers.get("content-security-policy") ?? "";
+  const body = await response.text();
+
+  expectCondition(
+    response.status === 200,
+    `/sw.js returned HTTP ${response.status}.`
+  );
+  expectCondition(
+    contentType.includes("application/javascript"),
+    `/sw.js returned ${contentType || "no content type"}.`
+  );
+  expectCondition(
+    cacheControl.includes("no-cache") && cacheControl.includes("no-store"),
+    "/sw.js can be served stale."
+  );
+  expectCondition(
+    contentSecurityPolicy.includes("default-src 'self'"),
+    "/sw.js is missing its restrictive Content-Security-Policy."
+  );
+  expectCondition(
+    body.includes("vallective-offline"),
+    "/sw.js is missing the Vallective offline cache."
+  );
+}
+
+async function expectOfflineFallback(baseUrl) {
+  const response = await request(baseUrl, "/offline.html");
+  const contentType = response.headers.get("content-type") ?? "";
+  const cacheControl = response.headers.get("cache-control") ?? "";
+  const body = await response.text();
+
+  expectCondition(
+    response.status === 200,
+    `/offline.html returned HTTP ${response.status}.`
+  );
+  expectCondition(
+    contentType.includes("text/html"),
+    "/offline.html did not return HTML."
+  );
+  expectCondition(
+    cacheControl.includes("no-cache") && cacheControl.includes("no-store"),
+    "/offline.html can be precached stale."
+  );
+  expectCondition(
+    /<html[^>]+lang="en"/i.test(body) && body.includes("You are offline"),
+    "/offline.html is missing its accessible offline content."
+  );
+  expectCondition(
+    body.includes("default-src 'none'") && body.includes("form-action 'self'"),
+    "/offline.html is missing its restrictive Content-Security-Policy."
+  );
+}
+
 const baseUrl = normalizeBaseUrl(readOption("--base-url"));
 
 const checks = [
@@ -195,6 +253,8 @@ const checks = [
       ),
   ],
   ["installable app manifest", () => expectManifest(baseUrl)],
+  ["offline fallback", () => expectOfflineFallback(baseUrl)],
+  ["service worker", () => expectServiceWorker(baseUrl)],
   ["brand icon", () => expectImage(baseUrl, "/icon.svg", "image/svg+xml")],
   [
     "Open Graph image",

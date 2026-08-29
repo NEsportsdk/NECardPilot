@@ -136,7 +136,9 @@ describe("auth route classification", () => {
 
   it("keeps installable app metadata public", () => {
     expect(isPublicRoute("/manifest.webmanifest")).toBe(true);
+    expect(isPublicRoute("/offline.html")).toBe(true);
     expect(isPublicRoute("/opengraph-image")).toBe(true);
+    expect(isPublicRoute("/sw.js")).toBe(true);
     expect(isPublicRoute("/twitter-image")).toBe(true);
   });
 
