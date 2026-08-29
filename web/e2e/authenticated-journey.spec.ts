@@ -226,6 +226,9 @@ test("the dedicated beta operator can read the private operations queue", async 
     page.getByRole("region", { name: "Pilot coverage summary" })
   ).toBeVisible();
   await expect(
+    page.getByRole("region", { name: "Launch readiness" })
+  ).toContainText("gates complete");
+  await expect(
     page.getByRole("heading", { level: 2, name: "Invite private beta testers" })
   ).toBeVisible();
   await expect(
