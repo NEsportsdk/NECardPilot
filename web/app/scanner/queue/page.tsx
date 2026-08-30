@@ -15,6 +15,7 @@ import AIReviewPanel from "@/components/scan/AIReviewPanel";
 import ImageUploadBox, {
   type ImageSide,
 } from "@/components/scan/ImageUploadBox";
+import CaptureEndurancePanel from "@/components/scanner/CaptureEndurancePanel";
 import { createId } from "@/lib/createId";
 import {
   canIdentifyCaptureItem,
@@ -226,6 +227,7 @@ export default function CaptureQueuePage() {
     DEFAULT_IDENTIFICATION_BUDGET_USD
   );
   const [retryRevision, setRetryRevision] = useState(0);
+  const [enduranceActive, setEnduranceActive] = useState(false);
   const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
   const [reviewState, setReviewState] = useState<ReviewState | null>(null);
   const [isOnline, setIsOnline] = useState(true);
@@ -1020,6 +1022,8 @@ export default function CaptureQueuePage() {
     window.localStorage.setItem(CAPTURE_SESSION_KEY, nextSessionId);
     setCaptureSessionId(nextSessionId);
     setNotice("En ny capture-session er startet. Eksisterende kø bevares.");
+
+    return nextSessionId;
   }
 
   return (
@@ -1029,7 +1033,7 @@ export default function CaptureQueuePage() {
       <main className="capture-main">
         <header className="capture-header">
           <div>
-            <p className="eyebrow">M22 · 500-card hardening</p>
+            <p className="eyebrow">M23 · real-device endurance</p>
             <h1>Capture Queue</h1>
             <p>
               Photograph continuously now. Upload runs in the background, and
@@ -1039,7 +1043,16 @@ export default function CaptureQueuePage() {
 
           <div className="header-actions">
             <Link href="/scanner">Guided scanner</Link>
-            <button type="button" onClick={startNewCaptureSession}>
+            <button
+              disabled={isLoading || enduranceActive}
+              title={
+                enduranceActive
+                  ? "Finish or end the active endurance run first."
+                  : undefined
+              }
+              type="button"
+              onClick={startNewCaptureSession}
+            >
               New capture session
             </button>
           </div>
@@ -1071,6 +1084,15 @@ export default function CaptureQueuePage() {
             <strong>{formatUsd(identificationCostSummary.recordedTotal)}</strong>
           </article>
         </section>
+
+        <CaptureEndurancePanel
+          disabled={isLoading || !selectedCollectionId}
+          isOnline={isOnline}
+          localItems={localItems}
+          onActiveChange={setEnduranceActive}
+          onStartNewSession={startNewCaptureSession}
+          remoteItems={remoteItems}
+        />
 
         {!isOnline ? (
           <div className="status-banner status-banner-offline" role="status">

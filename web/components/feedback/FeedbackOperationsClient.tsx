@@ -28,6 +28,7 @@ import {
   type BetaFeedbackQueueItem,
   type BetaFeedbackStatus,
 } from "@/lib/feedback/betaFeedbackAdmin";
+import type { CaptureEnduranceEvidence } from "@/lib/scan/captureEndurance";
 
 const categoryLabels: Record<BetaFeedbackQueueItem["category"], string> = {
   bug: "Broken",
@@ -54,6 +55,7 @@ const priorityLabels: Record<BetaFeedbackPriority, string> = {
 
 type FeedbackOperationsClientProps = {
   initialCoverageChecks: BetaPilotCoverageCheck[];
+  initialEnduranceRuns: CaptureEnduranceEvidence[];
   initialFeedback: BetaFeedbackQueueItem[];
   initialParticipants: BetaPilotProfile[];
   invitationConsole: ReactNode;
@@ -89,6 +91,7 @@ function shortReporterId(value: string) {
 
 export default function FeedbackOperationsClient({
   initialCoverageChecks,
+  initialEnduranceRuns,
   initialFeedback,
   initialParticipants,
   invitationConsole,
@@ -127,8 +130,26 @@ export default function FeedbackOperationsClient({
     [initialParticipants]
   );
   const launchReadiness = useMemo(
-    () => getBetaLaunchReadiness(initialCoverageChecks, feedback),
-    [feedback, initialCoverageChecks]
+    () =>
+      getBetaLaunchReadiness(
+        initialCoverageChecks,
+        feedback,
+        initialEnduranceRuns
+      ),
+    [feedback, initialCoverageChecks, initialEnduranceRuns]
+  );
+  const enduranceMetrics = useMemo(
+    () => ({
+      largestRun: initialEnduranceRuns.reduce(
+        (largest, run) => Math.max(largest, run.target_count),
+        0
+      ),
+      mobile: initialEnduranceRuns.filter(
+        (run) => run.primary_device !== "desktop"
+      ).length,
+      total: initialEnduranceRuns.length,
+    }),
+    [initialEnduranceRuns]
   );
 
   const filteredFeedback = useMemo(
@@ -260,6 +281,68 @@ export default function FeedbackOperationsClient({
               </article>
             ))}
           </div>
+        </section>
+
+        <section
+          className="endurance-evidence"
+          aria-labelledby="endurance-evidence-title"
+        >
+          <div className="coverage-heading">
+            <div>
+              <p className="eyebrow">Queue reliability evidence</p>
+              <h2 id="endurance-evidence-title">Capture endurance</h2>
+            </div>
+            <p>
+              Passed real-device runs contain aggregate counts and broad
+              platform context only—never card data or hardware identifiers.
+            </p>
+          </div>
+
+          <div
+            className="endurance-metrics"
+            role="region"
+            aria-label="Capture endurance summary"
+          >
+            <article>
+              <span>Passed runs</span>
+              <strong>{enduranceMetrics.total}</strong>
+            </article>
+            <article>
+              <span>Mobile runs</span>
+              <strong>{enduranceMetrics.mobile}</strong>
+            </article>
+            <article>
+              <span>Largest batch</span>
+              <strong>{enduranceMetrics.largestRun}</strong>
+            </article>
+          </div>
+
+          {initialEnduranceRuns.length ? (
+            <div className="endurance-list">
+              {initialEnduranceRuns.slice(0, 6).map((run) => (
+                <article key={run.id ?? run.capture_session_id}>
+                  <div className="endurance-card-heading">
+                    <strong>{run.target_count}-card run</strong>
+                    <time dateTime={run.completed_at}>
+                      {formatDate(run.completed_at)}
+                    </time>
+                  </div>
+                  <div className="endurance-card-context">
+                    <span>{pilotDeviceLabels[run.primary_device]}</span>
+                    <span>{run.browser}</span>
+                    <span>{pilotInstallLabels[run.install_mode]}</span>
+                    <span>{run.uploaded_count} uploaded</span>
+                    <span>Reopen ✓</span>
+                    <span>Offline recovery ✓</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="coverage-empty">
+              No passed endurance run yet. Start one from <code>/scanner/queue</code>.
+            </div>
+          )}
         </section>
 
         <section className="pilot-coverage" aria-labelledby="pilot-coverage-title">
@@ -609,6 +692,7 @@ export default function FeedbackOperationsClient({
 
         .operations-header,
         .launch-readiness,
+        .endurance-evidence,
         .pilot-coverage,
         .metrics-grid,
         .filters-panel,
@@ -687,6 +771,82 @@ export default function FeedbackOperationsClient({
           background:
             linear-gradient(125deg, rgba(124, 92, 255, 0.07), transparent 48%),
             rgba(14, 17, 25, 0.94);
+        }
+
+        .endurance-evidence {
+          margin-bottom: 14px;
+          padding: 20px;
+          border: 1px solid rgba(52, 211, 153, 0.15);
+          border-radius: 20px;
+          background:
+            linear-gradient(125deg, rgba(16, 185, 129, 0.06), transparent 48%),
+            rgba(14, 17, 25, 0.94);
+        }
+
+        .endurance-metrics {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+
+        .endurance-metrics article {
+          padding: 13px;
+          border: 1px solid rgba(52, 211, 153, 0.1);
+          border-radius: 13px;
+          background: rgba(16, 185, 129, 0.025);
+        }
+
+        .endurance-metrics span {
+          display: block;
+          color: #657084;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .endurance-metrics strong {
+          display: block;
+          margin-top: 6px;
+          color: #d7f9e9;
+          font-size: 20px;
+        }
+
+        .endurance-list {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .endurance-list > article {
+          padding: 13px;
+          border: 1px solid rgba(148, 163, 184, 0.08);
+          border-radius: 13px;
+          background: rgba(7, 9, 14, 0.38);
+        }
+
+        .endurance-card-heading,
+        .endurance-card-context {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+        }
+
+        .endurance-card-heading { justify-content: space-between; }
+        .endurance-card-heading strong { color: #b7f7dc; font-size: 10px; }
+        .endurance-card-heading time { color: #515a6d; font-size: 8px; }
+        .endurance-card-context {
+          flex-wrap: wrap;
+          margin-top: 9px;
+          color: #667084;
+          font-size: 8px;
+          text-transform: capitalize;
+        }
+        .endurance-card-context span:not(:last-child)::after {
+          margin-left: 9px;
+          color: #323949;
+          content: "·";
         }
 
         .launch-readiness {
@@ -1338,6 +1498,7 @@ export default function FeedbackOperationsClient({
           .readiness-gates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .participant-list { grid-template-columns: 1fr; }
+          .endurance-list { grid-template-columns: 1fr; }
           .operations-grid { grid-template-columns: 1fr; }
           .queue-list { max-height: 430px; }
         }
@@ -1357,9 +1518,11 @@ export default function FeedbackOperationsClient({
           .readiness-score { width: 100%; }
           .readiness-gates { grid-template-columns: 1fr; }
           .pilot-coverage { padding: 17px; }
+          .endurance-evidence { padding: 17px; }
           .coverage-heading { align-items: flex-start; flex-direction: column; }
           .coverage-heading > p { text-align: left; }
           .coverage-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .endurance-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
           .metrics-grid,
           .filters-panel,
           .workflow-grid { grid-template-columns: 1fr; }

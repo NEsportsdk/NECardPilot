@@ -4,6 +4,7 @@ import type {
   BetaPilotInstallMode,
 } from "@/lib/beta/betaPilot";
 import type { BetaFeedbackQueueItem } from "@/lib/feedback/betaFeedbackAdmin";
+import type { CaptureEnduranceEvidence } from "@/lib/scan/captureEndurance";
 
 export type BetaPilotCoverageCheck = {
   browser: BetaPilotBrowser;
@@ -16,6 +17,7 @@ export type BetaPilotCoverageCheck = {
 
 export type BetaLaunchReadinessGateId =
   | "android-installed"
+  | "capture-endurance"
   | "desktop-browser"
   | "feedback-risk"
   | "feedback-triage"
@@ -52,7 +54,8 @@ function hasCoverage(
 
 export function getBetaLaunchReadiness(
   coverageChecks: readonly BetaPilotCoverageCheck[],
-  feedback: readonly BetaFeedbackQueueItem[]
+  feedback: readonly BetaFeedbackQueueItem[],
+  enduranceRuns: readonly CaptureEnduranceEvidence[] = []
 ): BetaLaunchReadiness {
   const unresolvedFeedback = feedback.filter(
     (item) => item.status !== "closed" && item.status !== "resolved"
@@ -63,6 +66,21 @@ export function getBetaLaunchReadiness(
       id: "journey-verified",
       label: "Journey verified",
       met: coverageChecks.length > 0,
+    },
+    {
+      detail:
+        "A 10+ card capture run survived an app reopen and offline recovery with every card uploaded.",
+      id: "capture-endurance",
+      label: "Capture endurance",
+      met: enduranceRuns.some(
+        (run) =>
+          run.target_count >= 10 &&
+          run.captured_count >= run.target_count &&
+          run.uploaded_count >= run.target_count &&
+          run.failed_count === 0 &&
+          run.reload_verified &&
+          run.offline_recovery_verified
+      ),
     },
     {
       detail: "The installed iPhone experience has completed the full journey.",

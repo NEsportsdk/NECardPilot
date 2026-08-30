@@ -44,6 +44,11 @@ private data til offline-brug, men Capture Queue på `/scanner/queue` gemmer
 klargjorte for- og bagsidebilleder lokalt i browserens IndexedDB, indtil de er
 uploadet sikkert. Brugeren kan derfor fortsætte fotograferingen uden at vente på
 upload eller AI og starte den sekventielle identifikation særskilt senere.
+Capture Queue indeholder desuden et frivilligt M23-endurance run med mål på 10,
+25 eller 50 kort. Testen beviser, at en capture-session kan genåbnes og komme
+tilbage fra offline-tilstand, før et aggregeret resultat gemmes. Beviset
+indeholder kun tællinger og bred enheds-/browserklasse – aldrig kortdata,
+billeder, fuld user agent eller hardware-id.
 
 ## Kvalitetskontrol
 
@@ -100,7 +105,8 @@ Når alle ti trin er gennemført, bevarer Vallective et minimalt coverage check
 for kombinationen af enhedsgruppe, browsergruppe og installationstype. Senere
 tests overskriver derfor ikke tidligere iPhone-, Android- eller desktopbeviser.
 Launch readiness på `/feedback/manage` samler disse beviser med feedbackkøen i
-seks automatiske go/hold-kriterier for den offentlige beta.
+syv automatiske go/hold-kriterier for den offentlige beta, herunder mindst ét
+bestået Capture Queue-endurance run.
 
 Vallective har et webmanifest, platformstilpassede installationsinstruktioner
 og en service worker med en scriptfri offline-fallback. Service workeren cacher

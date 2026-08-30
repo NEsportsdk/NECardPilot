@@ -5,6 +5,7 @@ import {
   type BetaPilotCoverageCheck,
 } from "@/lib/beta/betaLaunchReadiness";
 import type { BetaFeedbackQueueItem } from "@/lib/feedback/betaFeedbackAdmin";
+import type { CaptureEnduranceEvidence } from "@/lib/scan/captureEndurance";
 
 const coverage: BetaPilotCoverageCheck = {
   browser: "safari",
@@ -36,6 +37,21 @@ const feedback: BetaFeedbackQueueItem = {
   user_id: coverage.user_id,
 };
 
+const endurance: CaptureEnduranceEvidence = {
+  browser: "chrome",
+  capture_session_id: "7af40613-b104-4f15-aa23-d965db2f11ea",
+  captured_count: 10,
+  completed_at: "2026-08-30T20:15:00.000Z",
+  failed_count: 0,
+  install_mode: "standalone",
+  offline_recovery_verified: true,
+  primary_device: "android",
+  reload_verified: true,
+  started_at: "2026-08-30T20:00:00.000Z",
+  target_count: 10,
+  uploaded_count: 10,
+};
+
 describe("beta launch readiness", () => {
   it("keeps launch on hold when platform coverage and triage are incomplete", () => {
     const readiness = getBetaLaunchReadiness([coverage], [feedback]);
@@ -44,7 +60,12 @@ describe("beta launch readiness", () => {
     expect(readiness.met).toBe(3);
     expect(
       readiness.gates.filter((gate) => !gate.met).map((gate) => gate.id)
-    ).toEqual(["android-installed", "desktop-browser", "feedback-triage"]);
+    ).toEqual([
+      "capture-endurance",
+      "android-installed",
+      "desktop-browser",
+      "feedback-triage",
+    ]);
   });
 
   it("reports ready only when every launch gate is satisfied", () => {
@@ -63,10 +84,11 @@ describe("beta launch readiness", () => {
           primary_device: "desktop",
         },
       ],
-      [{ ...feedback, reviewed_at: feedback.updated_at, status: "planned" }]
+      [{ ...feedback, reviewed_at: feedback.updated_at, status: "planned" }],
+      [endurance]
     );
 
-    expect(readiness).toMatchObject({ met: 6, status: "ready", total: 6 });
+    expect(readiness).toMatchObject({ met: 7, status: "ready", total: 7 });
     expect(readiness.gates.every((gate) => gate.met)).toBe(true);
   });
 
@@ -78,6 +100,16 @@ describe("beta launch readiness", () => {
 
     expect(
       readiness.gates.find((gate) => gate.id === "feedback-risk")?.met
+    ).toBe(false);
+  });
+
+  it("rejects incomplete endurance evidence", () => {
+    const readiness = getBetaLaunchReadiness([coverage], [], [
+      { ...endurance, offline_recovery_verified: false },
+    ]);
+
+    expect(
+      readiness.gates.find((gate) => gate.id === "capture-endurance")?.met
     ).toBe(false);
   });
 });

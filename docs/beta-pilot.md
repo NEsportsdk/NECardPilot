@@ -66,6 +66,26 @@ coverage check for den testede kombination. Det gør, at en senere test på en n
 platform ikke overskriver tidligere verifikation. Sporet gemmer ikke
 hardware-id, fuld user agent, kortdata eller browserhistorik.
 
+## Capture Queue endurance run
+
+Android- og iPhone-piloten skal desuden gennemføre mindst ét kontrolleret run
+fra `/scanner/queue`:
+
+1. Vælg **10 cards** og start endurance-runnet. Det opretter en ny, isoleret
+   capture-session; eksisterende kø og kort bevares.
+2. Tag for- og bagside af ti kort uden at starte AI-identifikation.
+3. Genindlæs siden eller luk og genåbn den installerede app. Runnet skal fortsat
+   være aktivt med samme tællinger.
+4. Slå forbindelsen fra, tag mindst ét kort, og slå forbindelsen til igen.
+5. Vent til alle ti kort viser som uploadet, og at ingen transportfejl står
+   tilbage.
+6. Vælg **Save passed run**. Kun sessionens samlede tællinger, bred enheds- og
+   browserklasse samt ja/nej-checks for genåbning og netværksrecovery gemmes.
+
+Testen starter ikke AI og skaber derfor ingen identifikationsudgift. Kortene
+bliver stående i den normale review-kø og kan identificeres senere under det
+separate USD-budgetværn.
+
 ## Prioritering
 
 | Prioritet | Betydning | Reaktion |
@@ -81,15 +101,17 @@ handling – ikke kopiere private brugerdata.
 
 ## Exitkriterier
 
-Launch readiness på `/feedback/manage` viser **Hold**, indtil alle seks
+Launch readiness på `/feedback/manage` viser **Hold**, indtil alle syv
 automatiske gates er grønne:
 
 1. Mindst én komplet 10-punkts rejse er bevaret.
-2. En installeret iPhone-rejse er gennemført.
-3. En installeret Android-rejse er gennemført.
-4. En desktop-browserrejse er gennemført.
-5. Alle rapporter er flyttet ud af `New`.
-6. Ingen uafsluttede High- eller Critical-rapporter er tilbage.
+2. Mindst ét 10+-korts endurance run har bevist genåbning, offline recovery og
+   fuld upload uden transportfejl.
+3. En installeret iPhone-rejse er gennemført.
+4. En installeret Android-rejse er gennemført.
+5. En desktop-browserrejse er gennemført.
+6. Alle rapporter er flyttet ud af `New`.
+7. Ingen uafsluttede High- eller Critical-rapporter er tilbage.
 
 De automatiske gates suppleres af følgende manuelle drifts- og
 kvalitetskontroller:

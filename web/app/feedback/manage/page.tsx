@@ -7,6 +7,7 @@ import type { BetaPilotProfile } from "@/lib/beta/betaPilot";
 import type { BetaPilotInvitation } from "@/lib/beta/betaPilotInvitation";
 import { isBetaPilotEmailConfigured } from "@/lib/email/sendBetaPilotInvitation";
 import type { BetaFeedbackQueueItem } from "@/lib/feedback/betaFeedbackAdmin";
+import type { CaptureEnduranceEvidence } from "@/lib/scan/captureEndurance";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function FeedbackOperationsPage() {
@@ -30,8 +31,13 @@ export default async function FeedbackOperationsPage() {
     redirect("/feedback");
   }
 
-  const [feedbackResult, participantsResult, coverageResult, invitationsResult] =
-    await Promise.all([
+  const [
+    feedbackResult,
+    participantsResult,
+    coverageResult,
+    invitationsResult,
+    enduranceResult,
+  ] = await Promise.all([
       supabase
         .from("beta_feedback")
         .select(
@@ -62,19 +68,28 @@ export default async function FeedbackOperationsPage() {
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(100),
+      supabase
+        .from("beta_capture_endurance_runs")
+        .select(
+          "id,user_id,capture_session_id,primary_device,browser,install_mode,target_count,captured_count,uploaded_count,failed_count,reload_verified,offline_recovery_verified,started_at,completed_at,created_at"
+        )
+        .order("completed_at", { ascending: false })
+        .limit(100),
     ]);
 
   if (
     feedbackResult.error ||
     participantsResult.error ||
     coverageResult.error ||
-    invitationsResult.error
+    invitationsResult.error ||
+    enduranceResult.error
   ) {
     throw (
       feedbackResult.error ??
       participantsResult.error ??
       coverageResult.error ??
-      invitationsResult.error
+      invitationsResult.error ??
+      enduranceResult.error
     );
   }
 
@@ -84,6 +99,9 @@ export default async function FeedbackOperationsPage() {
         (coverageResult.data ?? []) as BetaPilotCoverageCheck[]
       }
       initialFeedback={(feedbackResult.data ?? []) as BetaFeedbackQueueItem[]}
+      initialEnduranceRuns={
+        (enduranceResult.data ?? []) as CaptureEnduranceEvidence[]
+      }
       initialParticipants={(participantsResult.data ?? []) as BetaPilotProfile[]}
       invitationConsole={
         <PilotInvitationConsole
