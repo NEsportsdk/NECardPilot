@@ -139,7 +139,15 @@ function isIdentificationUsage(
   return (
     typeof usage.inputTokens === "number" &&
     typeof usage.outputTokens === "number" &&
-    typeof usage.totalTokens === "number"
+    typeof usage.totalTokens === "number" &&
+    (usage.estimatedCostUsd === undefined ||
+      typeof usage.estimatedCostUsd === "number") &&
+    (usage.modelCalls === undefined || Array.isArray(usage.modelCalls)) &&
+    (usage.webSearchCalls === undefined ||
+      typeof usage.webSearchCalls === "number") &&
+    (usage.pricingVersion === undefined ||
+      typeof usage.pricingVersion === "string") &&
+    (usage.note === undefined || typeof usage.note === "string")
   );
 }
 
@@ -232,6 +240,23 @@ export async function listCaptureQueueItems(collectionId?: string) {
   }
 
   return ((data ?? []) as CaptureQueueRow[]).map(mapCaptureQueueRow);
+}
+
+export async function getCaptureQueueItem(itemId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("scan_capture_items")
+    .select("*")
+    .eq("id", itemId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      getReadableError(error, "Capture-køposten kunne ikke genindlæses.")
+    );
+  }
+
+  return data ? mapCaptureQueueRow(data as CaptureQueueRow) : null;
 }
 
 export async function createUploadedCaptureItem({
@@ -327,11 +352,11 @@ export async function markCaptureItemIdentifying(item: CaptureQueueItem) {
   let query = supabase
     .from("scan_capture_items")
     .update({
-    status: "identifying",
-    attempt_count: Math.min(20, item.attemptCount + 1),
-    failure_stage: null,
-    error_message: null,
-    identification_started_at: new Date().toISOString(),
+      status: "identifying",
+      attempt_count: Math.min(20, item.attemptCount + 1),
+      failure_stage: null,
+      error_message: null,
+      identification_started_at: new Date().toISOString(),
     })
     .eq("id", item.id)
     .eq("status", item.status);
@@ -372,11 +397,32 @@ export async function markCaptureItemFailed(
   error: unknown,
   failureStage: Exclude<CaptureQueueFailureStage, null>
 ) {
-  return updateCaptureQueueItem(itemId, {
-    status: "failed",
-    failure_stage: failureStage,
-    error_message: getReadableError(error, "Behandlingen af kortet mislykkedes."),
-  });
+  const supabase = createClient();
+  const { data, error: updateError } = await supabase
+    .from("scan_capture_items")
+    .update({
+      status: "failed",
+      failure_stage: failureStage,
+      error_message: getReadableError(
+        error,
+        "Behandlingen af kortet mislykkedes."
+      ),
+    })
+    .eq("id", itemId)
+    .eq("status", "identifying")
+    .select("*")
+    .maybeSingle();
+
+  if (updateError) {
+    throw new Error(
+      getReadableError(
+        updateError,
+        "Identifikationsfejlen kunne ikke gemmes i køen."
+      )
+    );
+  }
+
+  return data ? mapCaptureQueueRow(data as CaptureQueueRow) : null;
 }
 
 export async function markCaptureItemSaved(itemId: string, cardId: string) {

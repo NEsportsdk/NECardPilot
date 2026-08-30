@@ -1,3 +1,5 @@
+import type { IdentificationUsage } from "@/lib/scan/identificationUsage";
+
 export type IdentifiedCard = {
   sport: string | null;
   playerName: string | null;
@@ -29,16 +31,13 @@ export type IdentifiedCard = {
 export type IdentifyCardResult = {
   success: boolean;
   card: IdentifiedCard;
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-  } | null;
+  usage: IdentificationUsage | null;
 };
 
 export async function identifyCard(
   frontPath: string,
-  backPath: string
+  backPath: string,
+  queueItemId?: string
 ): Promise<IdentifyCardResult> {
   const response = await fetch("/api/ai/identify-card", {
     method: "POST",
@@ -46,6 +45,7 @@ export async function identifyCard(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      ...(queueItemId ? { queueItemId } : {}),
       frontPath,
       backPath,
     }),

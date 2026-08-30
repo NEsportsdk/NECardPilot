@@ -21,9 +21,9 @@ import {
   captureQueueItemToUploadResult,
   createCapturePreviewUrls,
   createUploadedCaptureItem,
+  getCaptureQueueItem,
   listCaptureQueueItems,
   markCaptureItemFailed,
-  markCaptureItemIdentified,
   markCaptureItemIdentifying,
   markCaptureItemSaved,
   recoverInterruptedIdentification,
@@ -32,13 +32,22 @@ import {
 } from "@/lib/scan/captureQueue";
 import { identifyCard } from "@/lib/scan/identifyCard";
 import {
+  DEFAULT_IDENTIFICATION_COST_USD,
+  getIdentificationCostUsd,
+} from "@/lib/scan/identificationUsage";
+import {
   createLocalCaptureItem,
+  getAutomaticRetryDelayMs,
   getCaptureStorageEstimate,
+  isLocalCaptureReadyForUpload,
   listLocalCaptureItems,
   localCaptureImageToFile,
+  MAX_AUTOMATIC_UPLOAD_ATTEMPTS,
+  MAX_LOCAL_CAPTURE_ITEMS,
   removeLocalCaptureItem,
   requestPersistentCaptureStorage,
   saveLocalCaptureItem,
+  summarizeLocalCaptureItems,
   type CaptureStorageEstimate,
   type LocalCaptureItem,
 } from "@/lib/scan/localCaptureQueue";
@@ -66,7 +75,14 @@ type ReviewState = {
 const SELECTED_COLLECTION_KEY =
   "necardpilot.scanner.selectedCollectionId";
 const CAPTURE_SESSION_KEY = "vallective.captureQueue.sessionId";
+const IDENTIFICATION_BATCH_SIZE_KEY =
+  "vallective.captureQueue.identificationBatchSize";
+const IDENTIFICATION_BUDGET_KEY =
+  "vallective.captureQueue.identificationBudgetUsd";
 const INTERRUPTED_IDENTIFICATION_MINUTES = 15;
+const DEFAULT_IDENTIFICATION_BATCH_SIZE = 25;
+const DEFAULT_IDENTIFICATION_BUDGET_USD = 1;
+const MAX_IDENTIFICATION_BATCH_SIZE = 100;
 
 function getReadableError(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) {
@@ -99,6 +115,23 @@ function formatBytes(value: number | null) {
   return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+function formatUsd(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: value < 0.1 ? 3 : 2,
+    maximumFractionDigits: value < 0.1 ? 3 : 2,
+  }).format(value);
+}
+
+function clampNumber(value: number, minimum: number, maximum: number) {
+  if (!Number.isFinite(value)) {
+    return minimum;
+  }
+
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
 function getRemoteStatusLabel(item: CaptureQueueItem) {
   switch (item.status) {
     case "uploaded":
@@ -124,6 +157,10 @@ function getLocalStatusLabel(item: LocalCaptureItem) {
       return "Uploading in background";
     case "persisting":
       return "Securing queue item";
+    case "retry_wait":
+      return item.nextRetryAt
+        ? `Automatic retry at ${formatTime(item.nextRetryAt)}`
+        : "Waiting for automatic retry";
     case "failed":
       return item.failureStage === "persist"
         ? "Queue sync failed"
@@ -182,6 +219,13 @@ export default function CaptureQueuePage() {
   const [isQueueing, setIsQueueing] = useState(false);
   const [uploadWorkerActive, setUploadWorkerActive] = useState(false);
   const [identificationActive, setIdentificationActive] = useState(false);
+  const [identificationBatchSize, setIdentificationBatchSize] = useState(
+    DEFAULT_IDENTIFICATION_BATCH_SIZE
+  );
+  const [identificationBudgetUsd, setIdentificationBudgetUsd] = useState(
+    DEFAULT_IDENTIFICATION_BUDGET_USD
+  );
+  const [retryRevision, setRetryRevision] = useState(0);
   const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
   const [reviewState, setReviewState] = useState<ReviewState | null>(null);
   const [isOnline, setIsOnline] = useState(true);
@@ -248,6 +292,32 @@ export default function CaptureQueuePage() {
       failed,
     };
   }, [localItems, remoteItems]);
+
+  const localQueueSummary = useMemo(
+    () => summarizeLocalCaptureItems(localItems),
+    [localItems]
+  );
+
+  const identificationCostSummary = useMemo(() => {
+    const recordedCosts = remoteItems
+      .map((item) => getIdentificationCostUsd(item.identificationUsage))
+      .filter((value): value is number => value !== null);
+    const recordedTotal = recordedCosts.reduce(
+      (total, value) => total + value,
+      0
+    );
+    const averagePerCard =
+      recordedCosts.length > 0
+        ? recordedTotal / recordedCosts.length
+        : DEFAULT_IDENTIFICATION_COST_USD;
+
+    return {
+      recordedCards: recordedCosts.length,
+      recordedTotal,
+      averagePerCard,
+      readyForecast: averagePerCard * queueCounts.ready,
+    };
+  }, [queueCounts.ready, remoteItems]);
 
   const updateLocalState = useCallback((nextItem: LocalCaptureItem) => {
     setLocalItems((currentItems) =>
@@ -345,12 +415,28 @@ export default function CaptureQueuePage() {
           : nextCollections[0]?.id ?? "";
         const storedSessionId = window.localStorage.getItem(CAPTURE_SESSION_KEY);
         const nextSessionId = storedSessionId || createId();
+        const storedBatchSize = Number(
+          window.localStorage.getItem(IDENTIFICATION_BATCH_SIZE_KEY)
+        );
+        const storedBudgetUsd = Number(
+          window.localStorage.getItem(IDENTIFICATION_BUDGET_KEY)
+        );
 
         window.localStorage.setItem(CAPTURE_SESSION_KEY, nextSessionId);
 
         setCollections(nextCollections);
         setSelectedCollectionId(nextSelectedCollection);
         setCaptureSessionId(nextSessionId);
+        setIdentificationBatchSize(
+          storedBatchSize > 0
+            ? clampNumber(storedBatchSize, 1, MAX_IDENTIFICATION_BATCH_SIZE)
+            : DEFAULT_IDENTIFICATION_BATCH_SIZE
+        );
+        setIdentificationBudgetUsd(
+          storedBudgetUsd > 0
+            ? clampNumber(storedBudgetUsd, 0.01, 100)
+            : DEFAULT_IDENTIFICATION_BUDGET_USD
+        );
         setLocalItems(recoveredLocalItems);
         setRemoteItems(recoveredRemoteItems);
         setIsOnline(navigator.onLine);
@@ -409,6 +495,7 @@ export default function CaptureQueuePage() {
         ...item,
         status: item.uploadResult ? "persisting" : "uploading",
         attemptCount: Math.min(20, item.attemptCount + 1),
+        nextRetryAt: undefined,
         failureStage: undefined,
         errorMessage: undefined,
       };
@@ -455,13 +542,25 @@ export default function CaptureQueuePage() {
       } catch (error) {
         const waitingForNetwork =
           typeof navigator !== "undefined" && !navigator.onLine;
+        const canRetryAutomatically =
+          !waitingForNetwork &&
+          workingItem.attemptCount < MAX_AUTOMATIC_UPLOAD_ATTEMPTS;
+        const nextRetryAt = canRetryAutomatically
+          ? new Date(
+              Date.now() +
+                getAutomaticRetryDelayMs(workingItem.attemptCount)
+            ).toISOString()
+          : undefined;
         const failedItem: LocalCaptureItem = {
           ...workingItem,
           status: waitingForNetwork
             ? workingItem.uploadResult
               ? "persisting"
               : "queued"
-            : "failed",
+            : canRetryAutomatically
+              ? "retry_wait"
+              : "failed",
+          nextRetryAt,
           failureStage: waitingForNetwork
             ? undefined
             : workingItem.uploadResult
@@ -471,7 +570,9 @@ export default function CaptureQueuePage() {
             ? undefined
             : getReadableError(
                 error,
-                "Billederne kunne ikke uploades."
+                canRetryAutomatically
+                  ? "Uploaden blev afbrudt og prøves automatisk igen."
+                  : "Billederne kunne ikke uploades efter fem forsøg."
               ),
         };
 
@@ -483,19 +584,42 @@ export default function CaptureQueuePage() {
   );
 
   useEffect(() => {
+    if (!isOnline) {
+      return;
+    }
+
+    const nextRetryAt = localItems
+      .filter((item) => item.status === "retry_wait" && item.nextRetryAt)
+      .map((item) => new Date(item.nextRetryAt as string).getTime())
+      .filter(Number.isFinite)
+      .sort((first, second) => first - second)[0];
+
+    if (nextRetryAt === undefined) {
+      return;
+    }
+
+    const timeout = window.setTimeout(
+      () => setRetryRevision((revision) => revision + 1),
+      Math.max(0, nextRetryAt - Date.now())
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [isOnline, localItems]);
+
+  useEffect(() => {
+    const now = Date.now();
+
     if (
       isLoading ||
       !isOnline ||
       uploadWorkerRef.current ||
-      !localItems.some(
-        (item) => item.status === "queued" || item.status === "persisting"
-      )
+      !localItems.some((item) => isLocalCaptureReadyForUpload(item, now))
     ) {
       return;
     }
 
-    const nextItem = localItems.find(
-      (item) => item.status === "queued" || item.status === "persisting"
+    const nextItem = localItems.find((item) =>
+      isLocalCaptureReadyForUpload(item, now)
     );
 
     if (!nextItem) {
@@ -509,7 +633,13 @@ export default function CaptureQueuePage() {
       uploadWorkerRef.current = false;
       setUploadWorkerActive(false);
     });
-  }, [isLoading, isOnline, localItems, processLocalItem]);
+  }, [
+    isLoading,
+    isOnline,
+    localItems,
+    processLocalItem,
+    retryRevision,
+  ]);
 
   function handleCollectionChange(collectionId: string) {
     setSelectedCollectionId(collectionId);
@@ -561,6 +691,13 @@ export default function CaptureQueuePage() {
   }
 
   async function handleQueueCard() {
+    if (localItems.length >= MAX_LOCAL_CAPTURE_ITEMS) {
+      setErrorMessage(
+        "Den lokale sikkerhedskø har nået 500 kort. Lad baggrundsuploaden frigøre plads, før du fortsætter."
+      );
+      return;
+    }
+
     if (
       !selectedCollection ||
       !captureSessionId ||
@@ -610,6 +747,8 @@ export default function CaptureQueuePage() {
     const nextItem: LocalCaptureItem = {
       ...item,
       status: item.uploadResult ? "persisting" : "queued",
+      attemptCount: 0,
+      nextRetryAt: undefined,
       failureStage: undefined,
       errorMessage: undefined,
     };
@@ -630,10 +769,60 @@ export default function CaptureQueuePage() {
     await refreshStorageEstimate();
   }
 
-  async function startIdentification() {
-    const candidates = remoteItems.filter(canIdentifyCaptureItem);
+  function updateIdentificationBatchSize(value: number) {
+    const nextValue = Math.round(
+      clampNumber(value, 1, MAX_IDENTIFICATION_BATCH_SIZE)
+    );
+    setIdentificationBatchSize(nextValue);
+    window.localStorage.setItem(
+      IDENTIFICATION_BATCH_SIZE_KEY,
+      String(nextValue)
+    );
+  }
 
-    if (identificationActive || candidates.length === 0) {
+  function updateIdentificationBudget(value: number) {
+    const nextValue = clampNumber(value, 0.01, 100);
+    setIdentificationBudgetUsd(nextValue);
+    window.localStorage.setItem(
+      IDENTIFICATION_BUDGET_KEY,
+      String(nextValue)
+    );
+  }
+
+  async function startIdentification() {
+    const readyItems = remoteItems.filter(canIdentifyCaptureItem);
+
+    if (identificationActive || readyItems.length === 0) {
+      return;
+    }
+
+    const forecastPerCard = Math.max(
+      0.001,
+      identificationCostSummary.averagePerCard
+    );
+    const budgetCardLimit = Math.floor(
+      identificationBudgetUsd / forecastPerCard
+    );
+    const plannedCount = Math.min(
+      readyItems.length,
+      identificationBatchSize,
+      budgetCardLimit
+    );
+
+    if (plannedCount < 1) {
+      setErrorMessage(
+        `Budgettet på ${formatUsd(identificationBudgetUsd)} er lavere end det aktuelle estimat på ${formatUsd(forecastPerCard)} pr. kort.`
+      );
+      return;
+    }
+
+    const candidates = readyItems.slice(0, plannedCount);
+    const forecastTotal = candidates.length * forecastPerCard;
+    const confirmed = window.confirm(
+      `Start AI-identifikation af ${candidates.length} kort? Det estimerede forbrug er ${formatUsd(forecastTotal)} og stopper før næste kort, hvis budgetværnet på ${formatUsd(identificationBudgetUsd)} er nået. Det faktiske API-beløb kan variere.`
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -641,11 +830,23 @@ export default function CaptureQueuePage() {
     setIdentificationActive(true);
     setErrorMessage(null);
     setNotice(
-      `${candidates.length} kort er sat i identifikationskø. Du kan pause efter det aktuelle kort.`
+      `${candidates.length} kort er sat i identifikationskø. Hvert AI-resultat gemmes på serveren, før næste kort starter.`
     );
+
+    let processedCount = 0;
+    let runSpentUsd = 0;
+    let budgetStopped = false;
 
     for (const candidate of candidates) {
       if (stopIdentificationRef.current) {
+        break;
+      }
+
+      if (
+        processedCount > 0 &&
+        runSpentUsd + forecastPerCard > identificationBudgetUsd
+      ) {
+        budgetStopped = true;
         break;
       }
 
@@ -660,28 +861,61 @@ export default function CaptureQueuePage() {
           replaceRemoteItem(currentItems, identifyingItem)
         );
 
-        const result = await identifyCard(
+        await identifyCard(
           identifyingItem.frontImagePath,
-          identifyingItem.backImagePath
-        );
-        const identifiedItem = await markCaptureItemIdentified(
-          identifyingItem.id,
-          result
+          identifyingItem.backImagePath,
+          identifyingItem.id
         );
 
+        const identifiedItem = await getCaptureQueueItem(identifyingItem.id);
+
+        if (
+          !identifiedItem?.identificationResult ||
+          (identifiedItem.status !== "identified" &&
+            identifiedItem.status !== "needs_review" &&
+            identifiedItem.status !== "saved")
+        ) {
+          throw new Error(
+            "AI-resultatet blev ikke fundet i den sikre capture-kø."
+          );
+        }
+
+        runSpentUsd +=
+          getIdentificationCostUsd(identifiedItem.identificationUsage) ?? 0;
+        processedCount += 1;
         setRemoteItems((currentItems) =>
           replaceRemoteItem(currentItems, identifiedItem)
         );
       } catch (error) {
         try {
+          const recoveredItem = await getCaptureQueueItem(candidate.id);
+
+          if (
+            recoveredItem?.identificationResult &&
+            (recoveredItem.status === "identified" ||
+              recoveredItem.status === "needs_review" ||
+              recoveredItem.status === "saved")
+          ) {
+            runSpentUsd +=
+              getIdentificationCostUsd(recoveredItem.identificationUsage) ?? 0;
+            processedCount += 1;
+            setRemoteItems((currentItems) =>
+              replaceRemoteItem(currentItems, recoveredItem)
+            );
+            continue;
+          }
+
           const failedItem = await markCaptureItemFailed(
             candidate.id,
             error,
             "identification"
           );
-          setRemoteItems((currentItems) =>
-            replaceRemoteItem(currentItems, failedItem)
-          );
+
+          if (failedItem) {
+            setRemoteItems((currentItems) =>
+              replaceRemoteItem(currentItems, failedItem)
+            );
+          }
         } catch (updateError) {
           setErrorMessage(
             getReadableError(
@@ -694,11 +928,20 @@ export default function CaptureQueuePage() {
     }
 
     setIdentificationActive(false);
-    setNotice(
-      stopIdentificationRef.current
-        ? "Identifikationen er pauset efter det aktuelle kort."
-        : "Identifikationskøen er færdig. Resultaterne er klar til review."
-    );
+
+    if (stopIdentificationRef.current) {
+      setNotice(
+        `Identifikationen er pauset efter ${processedCount} kort · registreret estimat ${formatUsd(runSpentUsd)}.`
+      );
+    } else if (budgetStopped || plannedCount < readyItems.length) {
+      setNotice(
+        `Batchen stoppede sikkert efter ${processedCount} kort · registreret estimat ${formatUsd(runSpentUsd)}. Resten bliver i køen.`
+      );
+    } else {
+      setNotice(
+        `Identifikationsbatchen er færdig: ${processedCount} kort · registreret estimat ${formatUsd(runSpentUsd)}. Resultaterne er klar til review.`
+      );
+    }
   }
 
   function pauseIdentification() {
@@ -786,7 +1029,7 @@ export default function CaptureQueuePage() {
       <main className="capture-main">
         <header className="capture-header">
           <div>
-            <p className="eyebrow">M21 · Local-first intake</p>
+            <p className="eyebrow">M22 · 500-card hardening</p>
             <h1>Capture Queue</h1>
             <p>
               Photograph continuously now. Upload runs in the background, and
@@ -822,6 +1065,10 @@ export default function CaptureQueuePage() {
           <article>
             <span>Saved</span>
             <strong>{queueCounts.saved}</strong>
+          </article>
+          <article>
+            <span>AI cost recorded</span>
+            <strong>{formatUsd(identificationCostSummary.recordedTotal)}</strong>
           </article>
         </section>
 
@@ -917,6 +1164,8 @@ export default function CaptureQueuePage() {
                       ? ` of ${formatBytes(storageEstimate.quota)}`
                       : ""}
                     {storageEstimate?.persisted ? " · persistent" : ""}
+                    {` · queue ${formatBytes(localQueueSummary.bytes)}`}
+                    {` · ${localQueueSummary.remainingSlots} local slots left`}
                   </span>
                 </div>
 
@@ -929,7 +1178,8 @@ export default function CaptureQueuePage() {
                     !selectedCollection ||
                     !frontImage ||
                     !backImage ||
-                    Boolean(preparingSide)
+                    Boolean(preparingSide) ||
+                    localQueueSummary.remainingSlots === 0
                   }
                 >
                   {isQueueing ? "Securing photos…" : "Add to capture queue"}
@@ -949,6 +1199,36 @@ export default function CaptureQueuePage() {
                 </div>
 
                 <div className="queue-actions">
+                  <label>
+                    <span>Cards per batch</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={MAX_IDENTIFICATION_BATCH_SIZE}
+                      step="1"
+                      value={identificationBatchSize}
+                      onChange={(event) =>
+                        updateIdentificationBatchSize(
+                          Number(event.target.value)
+                        )
+                      }
+                      disabled={identificationActive}
+                    />
+                  </label>
+                  <label>
+                    <span>Run guardrail (USD)</span>
+                    <input
+                      type="number"
+                      min="0.01"
+                      max="100"
+                      step="0.01"
+                      value={identificationBudgetUsd}
+                      onChange={(event) =>
+                        updateIdentificationBudget(Number(event.target.value))
+                      }
+                      disabled={identificationActive}
+                    />
+                  </label>
                   {identificationActive ? (
                     <button
                       className="pause-button"
@@ -967,6 +1247,12 @@ export default function CaptureQueuePage() {
                       Start identification ({queueCounts.ready})
                     </button>
                   )}
+                  <small>
+                    Ready estimate {formatUsd(identificationCostSummary.readyForecast)}
+                    {identificationCostSummary.recordedCards > 0
+                      ? ` · based on ${identificationCostSummary.recordedCards} recorded card(s)`
+                      : " · conservative first-run estimate"}
+                  </small>
                 </div>
               </div>
 
@@ -1139,6 +1425,30 @@ export default function CaptureQueuePage() {
                 </p>
               </section>
             ) : null}
+
+            {localQueueSummary.retrying > 0 ? (
+              <section className="panel warning-panel">
+                <strong>
+                  {localQueueSummary.retrying} upload(s) retry automatically
+                </strong>
+                <p>
+                  Vallective uses bounded backoff and stops after five attempts,
+                  so a temporary outage cannot hammer the connection.
+                </p>
+              </section>
+            ) : null}
+
+            {localQueueSummary.remainingSlots <= 50 ? (
+              <section className="panel warning-panel">
+                <strong>
+                  {localQueueSummary.remainingSlots} local queue slots remain
+                </strong>
+                <p>
+                  Keep the app online until background upload has freed more
+                  space before a long capture session.
+                </p>
+              </section>
+            ) : null}
           </aside>
         </section>
       </main>
@@ -1218,6 +1528,49 @@ export default function CaptureQueuePage() {
           gap: 9px;
         }
 
+        .queue-actions {
+          max-width: 450px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .queue-actions label {
+          width: 132px;
+          display: grid;
+          gap: 5px;
+          color: #7f889b;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+        }
+
+        .queue-actions input {
+          width: 100%;
+          min-height: 40px;
+          padding: 0 10px;
+          border: 1px solid rgba(148, 163, 184, 0.17);
+          border-radius: 11px;
+          outline: none;
+          background: rgba(255, 255, 255, 0.035);
+          color: #f8fafc;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 750;
+        }
+
+        .queue-actions input:focus {
+          border-color: rgba(159, 147, 255, 0.65);
+        }
+
+        .queue-actions small {
+          flex-basis: 100%;
+          color: #6f788b;
+          font-size: 9px;
+          line-height: 1.5;
+          text-align: right;
+        }
+
         .header-actions a,
         .header-actions button,
         .queue-actions button,
@@ -1241,7 +1594,7 @@ export default function CaptureQueuePage() {
 
         .capture-metrics {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 10px;
           margin-top: 26px;
         }
@@ -1500,7 +1853,8 @@ export default function CaptureQueuePage() {
 
         .queue-status-identifying,
         .queue-status-uploading,
-        .queue-status-persisting {
+        .queue-status-persisting,
+        .queue-status-retry_wait {
           background: rgba(96, 165, 250, 0.09);
           color: #bfdbfe;
         }
@@ -1637,9 +1991,14 @@ export default function CaptureQueuePage() {
           .header-actions,
           .queue-actions,
           .queue-actions button,
+          .queue-actions label,
           .queue-card-button,
           .panel-heading label {
             width: 100%;
+          }
+
+          .queue-actions small {
+            text-align: left;
           }
 
           .capture-metrics {

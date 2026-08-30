@@ -5,10 +5,16 @@ const DATABASE_NAME = "vallective-capture-queue";
 const DATABASE_VERSION = 1;
 const ITEM_STORE = "capture-items";
 
+export const MAX_LOCAL_CAPTURE_ITEMS = 500;
+export const MAX_AUTOMATIC_UPLOAD_ATTEMPTS = 5;
+
+const AUTOMATIC_RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000, 60_000];
+
 export type LocalCaptureStatus =
   | "queued"
   | "uploading"
   | "persisting"
+  | "retry_wait"
   | "failed";
 
 export type LocalCaptureFailureStage = "upload" | "persist";
@@ -32,6 +38,7 @@ export type LocalCaptureItem = {
   back: LocalCaptureImage;
   uploadResult?: UploadCardImagesResult;
   attemptCount: number;
+  nextRetryAt?: string;
   failureStage?: LocalCaptureFailureStage;
   errorMessage?: string;
 };
@@ -41,6 +48,59 @@ export type CaptureStorageEstimate = {
   usage: number | null;
   persisted: boolean | null;
 };
+
+export type LocalCaptureQueueSummary = {
+  itemCount: number;
+  bytes: number;
+  averageBytesPerItem: number;
+  remainingSlots: number;
+  retrying: number;
+  failed: number;
+};
+
+export function getAutomaticRetryDelayMs(attemptCount: number) {
+  const index = Math.min(
+    AUTOMATIC_RETRY_DELAYS_MS.length - 1,
+    Math.max(0, Math.round(attemptCount) - 1)
+  );
+
+  return AUTOMATIC_RETRY_DELAYS_MS[index];
+}
+
+export function isLocalCaptureReadyForUpload(
+  item: LocalCaptureItem,
+  now = Date.now()
+) {
+  if (item.status === "queued" || item.status === "persisting") {
+    return true;
+  }
+
+  if (item.status !== "retry_wait" || !item.nextRetryAt) {
+    return false;
+  }
+
+  const retryAt = new Date(item.nextRetryAt).getTime();
+
+  return Number.isFinite(retryAt) && retryAt <= now;
+}
+
+export function summarizeLocalCaptureItems(
+  items: LocalCaptureItem[]
+): LocalCaptureQueueSummary {
+  const bytes = items.reduce(
+    (total, item) => total + item.front.blob.size + item.back.blob.size,
+    0
+  );
+
+  return {
+    itemCount: items.length,
+    bytes,
+    averageBytesPerItem: items.length > 0 ? Math.round(bytes / items.length) : 0,
+    remainingSlots: Math.max(0, MAX_LOCAL_CAPTURE_ITEMS - items.length),
+    retrying: items.filter((item) => item.status === "retry_wait").length,
+    failed: items.filter((item) => item.status === "failed").length,
+  };
+}
 
 function requireIndexedDb() {
   if (typeof indexedDB === "undefined") {

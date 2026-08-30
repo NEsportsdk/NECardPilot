@@ -2,6 +2,11 @@ import "server-only";
 
 import OpenAI from "openai";
 
+import {
+  calculateModelUsage,
+  type IdentificationModelUsage,
+} from "@/lib/scan/identificationUsage";
+
 export type CatalogCandidate = {
   sport: string | null;
   playerName: string | null;
@@ -37,6 +42,12 @@ export type CatalogResolution = {
   uncertainFields: string[];
   matchNotes: string[];
   sourceUrls: string[];
+};
+
+export type CatalogResolutionResult = {
+  resolution: CatalogResolution;
+  usage: IdentificationModelUsage;
+  webSearchCalls: number;
 };
 
 type ResolveCardWithWebInput = {
@@ -329,7 +340,7 @@ export async function resolveCardWithWeb({
   openai,
   evidence,
   candidate,
-}: ResolveCardWithWebInput): Promise<CatalogResolution> {
+}: ResolveCardWithWebInput): Promise<CatalogResolutionResult> {
   const response = await openai.responses.create({
     model: "gpt-5.6",
 
@@ -389,5 +400,15 @@ export async function resolveCardWithWeb({
     response.output_text
   );
 
-  return normalizeResolution(resolution, candidate);
+  return {
+    resolution: normalizeResolution(resolution, candidate),
+    usage: calculateModelUsage({
+      model: "gpt-5.6",
+      inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+    }),
+    webSearchCalls: response.output.filter(
+      (item) => item.type === "web_search_call"
+    ).length,
+  };
 }

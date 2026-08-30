@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+import {
+  calculateModelUsage,
+  createIdentificationUsage,
+  type IdentificationModelUsage,
+  type IdentificationUsage,
+} from "@/lib/scan/identificationUsage";
 import { createClient } from "@/lib/supabase/server";
 import {
   resolveCardWithWeb,
@@ -15,8 +21,18 @@ const CARD_IMAGE_BUCKET = "card-images";
 const SIGNED_URL_LIFETIME_SECONDS = 300;
 
 type IdentifyCardRequest = {
+  queueItemId?: unknown;
   frontPath?: unknown;
   backPath?: unknown;
+};
+
+type CaptureQueueIdentificationRow = {
+  id: string;
+  status: string;
+  front_image_path: string;
+  back_image_path: string;
+  identification_result: IdentifiedCard | null;
+  identification_usage: IdentificationUsage | null;
 };
 
 type CardEvidence = {
@@ -1155,7 +1171,24 @@ export async function POST(request: Request) {
     const body =
       (await request.json()) as IdentifyCardRequest;
 
-    const { frontPath, backPath } = body;
+    const { queueItemId, frontPath, backPath } = body;
+
+    if (
+      queueItemId !== undefined &&
+      (typeof queueItemId !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          queueItemId
+        ))
+    ) {
+      return NextResponse.json(
+        {
+          error: "Der mangler et gyldigt kø-ID til identifikationen.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
     if (
       !isValidStoragePath(frontPath) ||
@@ -1239,6 +1272,84 @@ export async function POST(request: Request) {
           status: 400,
         }
       );
+    }
+
+    if (typeof queueItemId === "string") {
+      const { data: queueItemData, error: queueItemError } = await supabase
+        .from("scan_capture_items")
+        .select(
+          "id, status, front_image_path, back_image_path, identification_result, identification_usage"
+        )
+        .eq("id", queueItemId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (queueItemError) {
+        console.error("Capture-køposten kunne ikke læses:", queueItemError);
+
+        return NextResponse.json(
+          {
+            error: "Capture-køposten kunne ikke kontrolleres sikkert.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      if (!queueItemData) {
+        return NextResponse.json(
+          {
+            error: "Capture-køposten findes ikke længere.",
+          },
+          {
+            status: 404,
+          }
+        );
+      }
+
+      const queueItem = queueItemData as CaptureQueueIdentificationRow;
+
+      if (
+        queueItem.front_image_path !== frontPath ||
+        queueItem.back_image_path !== backPath
+      ) {
+        return NextResponse.json(
+          {
+            error: "Billedstierne matcher ikke den valgte capture-køpost.",
+          },
+          {
+            status: 403,
+          }
+        );
+      }
+
+      if (
+        (queueItem.status === "identified" ||
+          queueItem.status === "needs_review" ||
+          queueItem.status === "saved") &&
+        queueItem.identification_result
+      ) {
+        return NextResponse.json({
+          success: true,
+          card: queueItem.identification_result,
+          usage: queueItem.identification_usage,
+          persisted: true,
+          reused: true,
+        });
+      }
+
+      if (queueItem.status !== "identifying") {
+        return NextResponse.json(
+          {
+            error:
+              "Kortet er ikke låst til identifikation. Genstart køen og prøv igen.",
+          },
+          {
+            status: 409,
+          }
+        );
+      }
     }
 
     const [
@@ -1454,6 +1565,10 @@ export async function POST(request: Request) {
       | CatalogResolution
       | null = null;
 
+    let cardBrainUsage: IdentificationModelUsage | null = null;
+
+    let webSearchCalls = 0;
+
     let cardBrainError: string | null =
       null;
 
@@ -1472,17 +1587,20 @@ export async function POST(request: Request) {
           ...evidence,
         };
 
-        catalogResolution =
-          await resolveCardWithWeb({
-            openai,
+        const catalogResult = await resolveCardWithWeb({
+          openai,
 
-            evidence: evidenceForWeb,
+          evidence: evidenceForWeb,
 
-            candidate:
-              createCatalogCandidate(
-                visualCard
-              ),
-          });
+          candidate:
+            createCatalogCandidate(
+              visualCard
+            ),
+        });
+
+        catalogResolution = catalogResult.resolution;
+        cardBrainUsage = catalogResult.usage;
+        webSearchCalls = catalogResult.webSearchCalls;
 
         identifiedCard =
           mergeCatalogResolution(
@@ -1550,6 +1668,86 @@ export async function POST(request: Request) {
       error: cardBrainError,
     };
 
+    const modelCalls: IdentificationModelUsage[] = [
+      calculateModelUsage({
+        model: "gpt-4.1-mini",
+        inputTokens: evidenceInputTokens,
+        outputTokens: evidenceOutputTokens,
+      }),
+      calculateModelUsage({
+        model: "gpt-4.1",
+        inputTokens: identificationInputTokens,
+        outputTokens: identificationOutputTokens,
+      }),
+    ];
+
+    if (cardBrainUsage) {
+      modelCalls.push(cardBrainUsage);
+    }
+
+    const usage = createIdentificationUsage({
+      modelCalls,
+      webSearchCalls,
+      note: useCardBrain
+        ? "Estimatet omfatter visuel identifikation, Card Brain-tokenforbrug og registrerede web search-kald."
+        : "Card Brain-webopslag var ikke nødvendigt for denne scanning.",
+    });
+
+    if (typeof queueItemId === "string") {
+      const identifiedAt = new Date().toISOString();
+      const nextStatus = identifiedCard.needsManualReview
+        ? "needs_review"
+        : "identified";
+      const { data: persistedItem, error: persistError } = await supabase
+        .from("scan_capture_items")
+        .update({
+          status: nextStatus,
+          identification_result: identifiedCard,
+          identification_usage: usage,
+          failure_stage: null,
+          error_message: null,
+          identified_at: identifiedAt,
+        })
+        .eq("id", queueItemId)
+        .eq("user_id", user.id)
+        .eq("status", "identifying")
+        .select("id")
+        .maybeSingle();
+
+      if (persistError || !persistedItem) {
+        const { data: existingItem } = await supabase
+          .from("scan_capture_items")
+          .select("status, identification_result, identification_usage")
+          .eq("id", queueItemId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (
+          existingItem?.identification_result &&
+          (existingItem.status === "identified" ||
+            existingItem.status === "needs_review" ||
+            existingItem.status === "saved")
+        ) {
+          return NextResponse.json({
+            success: true,
+            card: existingItem.identification_result,
+            usage: existingItem.identification_usage,
+            persisted: true,
+            reused: true,
+          });
+        }
+
+        console.error("AI-resultatet kunne ikke gemmes i capture-køen:", {
+          queueItemId,
+          persistError,
+        });
+
+        throw new Error(
+          "AI-resultatet blev oprettet, men kunne ikke gemmes sikkert i capture-køen."
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
 
@@ -1568,26 +1766,9 @@ export async function POST(request: Request) {
           Date.now() -
           requestStartedAt,
       },
-
-      usage: {
-        inputTokens:
-          evidenceInputTokens +
-          identificationInputTokens,
-
-        outputTokens:
-          evidenceOutputTokens +
-          identificationOutputTokens,
-
-        totalTokens:
-          evidenceInputTokens +
-          evidenceOutputTokens +
-          identificationInputTokens +
-          identificationOutputTokens,
-
-        note: useCardBrain
-          ? "Tokenforbruget her omfatter de to visuelle AI-kald. Eventuelt Card Brain-webopslag afregnes derudover."
-          : "Card Brain-webopslag var ikke nødvendigt for denne scanning.",
-      },
+      usage,
+      persisted: typeof queueItemId === "string",
+      reused: false,
     });
   } catch (error) {
     console.error(
