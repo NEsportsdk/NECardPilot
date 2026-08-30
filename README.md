@@ -39,8 +39,11 @@ På skærme op til 620 px får de autentificerede app-flows en fast,
 safe-area-aware bundnavigation med scanner som primær handling. Den sekundære
 navigation åbnes som en tastaturvenlig dialog, og en offline-status advarer, når
 live-data midlertidigt ikke kan hentes. Vallective udstiller samtidig et web app
-manifest med genveje til scanner og kortbibliotek. Appen cacher endnu ikke data
-til fuld offline-brug.
+manifest med genveje til scanner og kortbibliotek. Appen cacher ikke generelle
+private data til offline-brug, men Capture Queue på `/scanner/queue` gemmer
+klargjorte for- og bagsidebilleder lokalt i browserens IndexedDB, indtil de er
+uploadet sikkert. Brugeren kan derfor fortsætte fotograferingen uden at vente på
+upload eller AI og starte den sekventielle identifikation særskilt senere.
 
 ## Kvalitetskontrol
 

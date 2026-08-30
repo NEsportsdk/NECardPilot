@@ -31,6 +31,8 @@ type UploadCardImagesInput = {
   collectionId: string;
   frontImage: File;
   backImage: File;
+  scanId?: string;
+  replaceExisting?: boolean;
 };
 
 function validateImage(file: File, side: "front" | "back") {
@@ -107,10 +109,12 @@ async function uploadSingleImage({
   file,
   path,
   side,
+  replaceExisting,
 }: {
   file: File;
   path: string;
   side: "front" | "back";
+  replaceExisting: boolean;
 }): Promise<UploadedCardImage> {
   const supabase = createClient();
 
@@ -119,7 +123,7 @@ async function uploadSingleImage({
     .upload(path, file, {
       cacheControl: "3600",
       contentType: file.type,
-      upsert: false,
+      upsert: replaceExisting,
     });
 
   if (error) {
@@ -144,6 +148,8 @@ export async function uploadCardImages({
   collectionId,
   frontImage,
   backImage,
+  scanId: requestedScanId,
+  replaceExisting = false,
 }: UploadCardImagesInput): Promise<UploadCardImagesResult> {
   if (!collectionId.trim()) {
     throw new Error("Der mangler en collection til kortet.");
@@ -163,7 +169,12 @@ export async function uploadCardImages({
     throw new Error("Du skal være logget ind for at uploade kortbilleder.");
   }
 
-  const scanId = createId();
+  const scanId = requestedScanId?.trim() || createId();
+
+  if (!/^[a-zA-Z0-9-_]{8,128}$/.test(scanId)) {
+    throw new Error("Scan-ID'et er ugyldigt.");
+  }
+
   const safeCollectionId = collectionId.replace(/[^a-zA-Z0-9-_]/g, "");
 
   const frontPath = [
@@ -187,6 +198,7 @@ export async function uploadCardImages({
       file: frontImage,
       path: frontPath,
       side: "front",
+      replaceExisting,
     });
 
     uploadedPaths.push(front.path);
@@ -195,6 +207,7 @@ export async function uploadCardImages({
       file: backImage,
       path: backPath,
       side: "back",
+      replaceExisting,
     });
 
     uploadedPaths.push(back.path);

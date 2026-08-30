@@ -821,6 +821,10 @@ export default function ScannerPage() {
           </div>
 
           <div className="header-actions">
+            <Link className="secondary-link" href="/scanner/queue">
+              Open Capture Queue
+            </Link>
+
             <Link className="secondary-link" href="/cards">
               View all cards
             </Link>
@@ -1306,12 +1310,15 @@ export default function ScannerPage() {
             </section>
 
             <section className="panel coming-next-panel">
-              <p className="eyebrow">Coming next</p>
-              <h2>Offline-safe queue</h2>
+              <p className="eyebrow">Now available</p>
+              <h2>Capture Queue</h2>
               <p>
-                A later scanner sprint adds retry after network errors,
-                identify-only mode and a true offline capture queue.
+                Photograph card after card without waiting for AI. Pending
+                images stay safe on this device and upload in the background.
               </p>
+              <Link className="secondary-link queue-link" href="/scanner/queue">
+                Capture first, identify later
+              </Link>
             </section>
           </aside>
         </section>
@@ -1943,7 +1950,7 @@ export default function ScannerPage() {
         .start-copy p:last-child,
         .success-copy p:last-child,
         .finished-panel > p,
-        .coming-next-panel > p:last-child {
+        .coming-next-panel > p:not(.eyebrow) {
           margin: 9px 0 0;
           color: #7d8698;
           font-size: 12px;
@@ -2413,11 +2420,16 @@ export default function ScannerPage() {
         }
 
         .mobile-note-panel p,
-        .coming-next-panel p:last-child {
+        .coming-next-panel > p:not(.eyebrow) {
           margin: 6px 0 0;
           color: #697183;
           font-size: 9px;
           line-height: 1.55;
+        }
+
+        .coming-next-panel .queue-link {
+          width: 100%;
+          margin-top: 14px;
         }
 
         .mobile-start-bar {
