@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Vallective V3 Card Window concept</title>
+  <defs>
+    <mask id="card-window">
+      <rect width="512" height="512" fill="#000000" />
+      <rect x="103" y="47" width="306" height="418" rx="66" fill="#FFFFFF" />
+      <path
+        d="M174 151L256 364L338 151"
+        fill="none"
+        stroke="#000000"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="58"
+      />
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#7867FF" mask="url(#card-window)" />
+</svg>

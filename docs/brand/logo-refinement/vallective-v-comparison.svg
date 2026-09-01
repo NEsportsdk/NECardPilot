@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000">
+  <title>Vallective simplified V comparison</title>
+  <rect width="1600" height="1000" fill="#07090D" />
+  <circle cx="1390" cy="-10" r="330" fill="#7867FF" opacity="0.08" />
+
+  <text x="90" y="95" fill="#A99DFF" font-family="Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="5">VALLECTIVE BRAND SPRINT</text>
+  <text x="90" y="160" fill="#F5F7FB" font-family="Arial, sans-serif" font-size="54" font-weight="700">A lighter, sharper V</text>
+  <text x="90" y="205" fill="#8D96A8" font-family="Arial, sans-serif" font-size="23">Three deterministic vector directions · no chart · no gradients · no decorative detail</text>
+
+  <g transform="translate(75 270)">
+    <rect width="450" height="620" rx="34" fill="#10141C" stroke="#FFFFFF" stroke-opacity="0.09" />
+    <rect x="105" y="62" width="240" height="240" rx="64" fill="#0B0E14" stroke="#FFFFFF" stroke-opacity="0.08" />
+    <g transform="translate(141 98) scale(.33)">
+      <path d="M111 84C106 69 114 56 129 52L151 45C166 41 178 49 183 64L276 374L253 441C248 455 242 455 237 441L111 84Z" fill="#F5F7FB" />
+      <path d="M401 84C406 69 398 56 383 52L361 45C346 41 334 49 329 64L236 374L259 441C264 455 270 455 275 441L401 84Z" fill="#7867FF" />
+    </g>
+    <text x="42" y="370" fill="#A99DFF" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="3">V1 · PRECISION CUT</text>
+    <text x="42" y="425" fill="#F5F7FB" font-family="Arial, sans-serif" font-size="31" font-weight="700" letter-spacing="3">VALLECTIVE</text>
+    <text x="42" y="470" fill="#8D96A8" font-family="Arial, sans-serif" font-size="18">Recognisable evolution</text>
+    <text x="42" y="505" fill="#8D96A8" font-family="Arial, sans-serif" font-size="18">of the current card V.</text>
+    <line x1="42" y1="555" x2="408" y2="555" stroke="#C5A46D" stroke-width="3" />
+    <text x="42" y="592" fill="#C5A46D" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2">FAMILIAR · SLIMMER</text>
+  </g>
+
+  <g transform="translate(575 270)">
+    <rect width="450" height="620" rx="34" fill="#10141C" stroke="#FFFFFF" stroke-opacity="0.09" />
+    <rect x="105" y="62" width="240" height="240" rx="64" fill="#0B0E14" stroke="#C5A46D" stroke-opacity="0.22" />
+    <g transform="translate(141 98) scale(.33)">
+      <path d="M139 91L256 421" fill="none" stroke="#F5F7FB" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+      <path d="M373 91L256 421" fill="none" stroke="#7867FF" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+    </g>
+    <text x="42" y="370" fill="#A99DFF" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="3">V2 · OPEN V</text>
+    <text x="42" y="425" fill="#F5F7FB" font-family="Arial, sans-serif" font-size="31" font-weight="700" letter-spacing="3">VALLECTIVE</text>
+    <text x="42" y="470" fill="#8D96A8" font-family="Arial, sans-serif" font-size="18">The cleanest and most</text>
+    <text x="42" y="505" fill="#8D96A8" font-family="Arial, sans-serif" font-size="18">timeless master mark.</text>
+    <line x1="42" y1="555" x2="408" y2="555" stroke="#C5A46D" stroke-width="3" />
+    <text x="42" y="592" fill="#C5A46D" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2">RECOMMENDED · LIGHTEST</text>
+  </g>
+
+  <g transform="translate(1075 270)">
+    <rect width="450" height="620" rx="34" fill="#10141C" stroke="#FFFFFF" stroke-opacity="0.09" />
+    <rect x="105" y="62" width="240" height="240" rx="64" fill="#0B0E14" stroke="#FFFFFF" stroke-opacity="0.08" />
+    <g transform="translate(141 98) scale(.33)">
+      <defs>
+        <mask id="board-card-window">
+          <rect width="512" height="512" fill="#000000" />
+          <rect x="103" y="47" width="306" height="418" rx="66" fill="#FFFFFF" />
+          <path d="M174 151L256 364L338 151" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="58" />
+        </mask>
+      </defs>
+      <rect width="512" height="512" fill="#7867FF" mask="url(#board-card-window)" />
+    </g>
+    <text x="42" y="370" fill="#A99DFF" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="3">V3 · CARD WINDOW</text>
+    <text x="42" y="425" fill="#F5F7FB" font-family="Arial, sans-serif" font-size="31" font-weight="700" letter-spacing="3">VALLECTIVE</text>
+    <text x="42" y="470" fill="#8D96A8" font-family="Arial, sans-serif" font-size="18">Strong app icon with a</text>
+    <text x="42" y="505" fill="#8D96A8" font-family="Arial, sans-serif" font-size="18">literal card silhouette.</text>
+    <line x1="42" y1="555" x2="408" y2="555" stroke="#C5A46D" stroke-width="3" />
+    <text x="42" y="592" fill="#C5A46D" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2">BOLD · ICON-FIRST</text>
+  </g>
+
+  <text x="90" y="955" fill="#5D6678" font-family="Arial, sans-serif" font-size="16">A+B direction · violet master identity · champagne warmth reserved for editorial accents</text>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350">
+  <title>Vallective Instagram launch post — One collection</title>
+  <rect width="1080" height="1350" fill="#07090D" />
+  <rect x="58" y="58" width="964" height="1234" rx="54" fill="#10141C" stroke="#292D3B" stroke-width="2" />
+
+  <g font-family="Geist, Inter, Arial, Helvetica, sans-serif">
+    <text x="100" y="134" fill="#A99BFF" font-size="22" font-weight="700" letter-spacing="7">VALLECTIVE · COLLECTION CLARITY</text>
+    <text x="100" y="320" fill="#F5F7FB" font-size="92" font-weight="700" letter-spacing="-4">One collection.</text>
+    <text x="100" y="426" fill="#F5F7FB" font-size="92" font-weight="700" letter-spacing="-4">One true number.</text>
+
+    <rect x="100" y="540" width="880" height="430" rx="40" fill="#0B0E14" stroke="#2A2D3C" stroke-width="2" />
+    <text x="150" y="618" fill="#697084" font-size="20" font-weight="700" letter-spacing="5">TOTAL COLLECTION VALUE</text>
+    <text x="150" y="765" fill="#F5F7FB" font-size="118" font-weight="700">— — —</text>
+    <text x="150" y="848" fill="#AAB1C0" font-size="28">Every card. Every cost. Every decision.</text>
+    <circle cx="885" cy="752" r="52" fill="none" stroke="#7867FF" stroke-width="16" />
+    <path d="M854 755L878 779L921 721" fill="none" stroke="#F5F7FB" stroke-linecap="round" stroke-linejoin="round" stroke-width="13" />
+
+    <line x1="100" y1="1056" x2="420" y2="1056" stroke="#CBAE72" stroke-width="5" />
+    <text x="100" y="1134" fill="#AAB1C0" font-size="29">Your collection deserves more than a spreadsheet.</text>
+    <text x="100" y="1212" fill="#697084" font-size="21" letter-spacing="2">EXPLORE THE PRIVATE BETA</text>
+    <text x="980" y="1212" fill="#A99BFF" font-size="21" font-weight="700" letter-spacing="2" text-anchor="end">VALLECTIVE.COM</text>
+  </g>
+</svg>

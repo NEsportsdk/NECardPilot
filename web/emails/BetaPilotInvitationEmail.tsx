@@ -6,23 +6,26 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Section,
   Tailwind,
   Text,
 } from "react-email";
 
-import tailwindConfig from "@/emails/tailwind.config";
+import tailwindConfig, { brandAssets } from "@/emails/tailwind.config";
 
 export const betaPilotInvitationSubject =
   "Your Vallective private beta invitation";
 
 export type BetaPilotInvitationEmailProps = {
   inviteUrl: string;
+  logoUrl?: string;
 };
 
 export default function BetaPilotInvitationEmail({
   inviteUrl,
+  logoUrl = brandAssets.logo.src,
 }: BetaPilotInvitationEmailProps) {
   return (
     <Html dir="ltr" lang="en">
@@ -40,7 +43,15 @@ export default function BetaPilotInvitationEmail({
             dir="ltr"
             lang="en"
           >
-            <Text className="m-0 mb-6 text-xs font-bold uppercase tracking-widest text-brand-accent">
+            <Img
+              alt={brandAssets.logo.alt}
+              className="mb-6 block"
+              height={brandAssets.logo.height}
+              src={logoUrl}
+              width={brandAssets.logo.width}
+            />
+
+            <Text className="m-0 mb-6 text-xs font-bold uppercase tracking-widest text-brand-champagne">
               VALLECTIVE · PRIVATE BETA
             </Text>
 
@@ -95,4 +106,5 @@ export default function BetaPilotInvitationEmail({
 
 BetaPilotInvitationEmail.PreviewProps = {
   inviteUrl: "https://vallective.com/signup?next=%2Fbeta",
+  logoUrl: "http://localhost:3000/icons/vallective-email-mark.png",
 } satisfies BetaPilotInvitationEmailProps;

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350">
+  <title>Vallective Instagram launch post — What Vallective tracks</title>
+  <rect width="1080" height="1350" fill="#07090D" />
+  <circle cx="1010" cy="-20" r="310" fill="#121225" />
+
+  <g font-family="Geist, Inter, Arial, Helvetica, sans-serif">
+    <text x="80" y="102" fill="#A99BFF" font-size="21" font-weight="700" letter-spacing="7">COLLECTOR INTELLIGENCE</text>
+    <text x="80" y="242" fill="#F5F7FB" font-size="77" font-weight="700" letter-spacing="-3">What Vallective</text>
+    <text x="80" y="330" fill="#F5F7FB" font-size="77" font-weight="700" letter-spacing="-3">tracks for you.</text>
+
+    <g font-size="22" font-weight="700" letter-spacing="2">
+      <rect x="80" y="426" width="440" height="174" rx="30" fill="#10141C" stroke="#292D3B" stroke-width="2" />
+      <text x="120" y="490" fill="#CBAE72" font-size="17" letter-spacing="4">01</text>
+      <text x="120" y="552" fill="#F5F7FB">PERSONAL COLLECTION</text>
+
+      <rect x="560" y="426" width="440" height="174" rx="30" fill="#10141C" stroke="#292D3B" stroke-width="2" />
+      <text x="600" y="490" fill="#CBAE72" font-size="17" letter-spacing="4">02</text>
+      <text x="600" y="552" fill="#F5F7FB">INVENTORY</text>
+
+      <rect x="80" y="630" width="440" height="174" rx="30" fill="#10141C" stroke="#292D3B" stroke-width="2" />
+      <text x="120" y="694" fill="#CBAE72" font-size="17" letter-spacing="4">03</text>
+      <text x="120" y="756" fill="#F5F7FB">MARKET VALUE</text>
+
+      <rect x="560" y="630" width="440" height="174" rx="30" fill="#10141C" stroke="#292D3B" stroke-width="2" />
+      <text x="600" y="694" fill="#CBAE72" font-size="17" letter-spacing="4">04</text>
+      <text x="600" y="756" fill="#F5F7FB">COST BASIS</text>
+
+      <rect x="80" y="834" width="440" height="174" rx="30" fill="#10141C" stroke="#292D3B" stroke-width="2" />
+      <text x="120" y="898" fill="#CBAE72" font-size="17" letter-spacing="4">05</text>
+      <text x="120" y="960" fill="#F5F7FB">FEES &amp; GRADING</text>
+
+      <rect x="560" y="834" width="440" height="174" rx="30" fill="#10141C" stroke="#7867FF" stroke-width="3" />
+      <text x="600" y="898" fill="#CBAE72" font-size="17" letter-spacing="4">06</text>
+      <text x="600" y="960" fill="#F5F7FB">REAL PROFIT / LOSS</text>
+    </g>
+
+    <text x="80" y="1112" fill="#AAB1C0" font-size="27">One intelligent workspace for the full life of every card.</text>
+    <text x="80" y="1212" fill="#697084" font-size="21" letter-spacing="2">SAVE THIS · FOLLOW THE BUILD</text>
+    <text x="1000" y="1212" fill="#A99BFF" font-size="21" font-weight="700" letter-spacing="2" text-anchor="end">VALLECTIVE.COM</text>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 320">
+  <title>Vallective horizontal logo for light surfaces</title>
+  <g transform="translate(38 48) scale(.4375)">
+    <path d="M139 91L256 421" fill="none" stroke="#07090D" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+    <path d="M373 91L256 421" fill="none" stroke="#7867FF" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+  </g>
+  <text x="306" y="195" fill="#07090D" font-family="Geist, Inter, Arial, Helvetica, sans-serif" font-size="102" font-weight="700" letter-spacing="11">VALLECTIVE</text>
+</svg>

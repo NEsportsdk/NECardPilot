@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 980">
+  <title>Vallective V logo micro-size test</title>
+  <rect width="1600" height="980" fill="#07090D" />
+  <circle cx="1510" cy="0" r="300" fill="#121225" />
+
+  <text x="90" y="92" fill="#A99BFF" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="8">VALLECTIVE BRAND SPRINT</text>
+  <text x="90" y="164" fill="#F5F7FB" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="700">Micro-size legibility</text>
+  <text x="90" y="212" fill="#8991A4" font-family="Arial, Helvetica, sans-serif" font-size="24">Exact vector artwork shown at 96, 64, 48, 32, 24 and 16 px</text>
+
+  <defs>
+    <symbol id="v1" viewBox="0 0 512 512">
+      <path d="M111 84C106 69 114 56 129 52L151 45C166 41 178 49 183 64L276 374L253 441C248 455 242 455 237 441L111 84Z" fill="#F5F7FB" />
+      <path d="M401 84C406 69 398 56 383 52L361 45C346 41 334 49 329 64L236 374L259 441C264 455 270 455 275 441L401 84Z" fill="#7867FF" />
+    </symbol>
+    <symbol id="v2" viewBox="0 0 512 512">
+      <path d="M139 91L256 421" fill="none" stroke="#F5F7FB" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+      <path d="M373 91L256 421" fill="none" stroke="#7867FF" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+    </symbol>
+    <symbol id="v3" viewBox="0 0 512 512">
+      <mask id="micro-card-window">
+        <rect width="512" height="512" fill="#000000" />
+        <rect x="103" y="47" width="306" height="418" rx="66" fill="#FFFFFF" />
+        <path d="M174 151L256 364L338 151" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="58" />
+      </mask>
+      <rect width="512" height="512" fill="#7867FF" mask="url(#micro-card-window)" />
+    </symbol>
+  </defs>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="90" y="330" fill="#A99BFF" font-size="22" font-weight="700" letter-spacing="4">V1 · PRECISION CUT</text>
+    <text x="90" y="505" fill="#A99BFF" font-size="22" font-weight="700" letter-spacing="4">V2 · OPEN V</text>
+    <text x="90" y="680" fill="#A99BFF" font-size="22" font-weight="700" letter-spacing="4">V3 · CARD WINDOW</text>
+
+    <text x="410" y="274" fill="#697084" font-size="17" text-anchor="middle">96</text>
+    <text x="595" y="274" fill="#697084" font-size="17" text-anchor="middle">64</text>
+    <text x="755" y="274" fill="#697084" font-size="17" text-anchor="middle">48</text>
+    <text x="900" y="274" fill="#697084" font-size="17" text-anchor="middle">32</text>
+    <text x="1030" y="274" fill="#697084" font-size="17" text-anchor="middle">24</text>
+    <text x="1150" y="274" fill="#697084" font-size="17" text-anchor="middle">16</text>
+
+    <g fill="#10131A" stroke="#242936">
+      <rect x="342" y="292" width="136" height="136" rx="28" />
+      <rect x="535" y="316" width="120" height="120" rx="25" />
+      <rect x="695" y="324" width="120" height="120" rx="25" />
+      <rect x="840" y="332" width="120" height="120" rx="25" />
+      <rect x="970" y="336" width="120" height="120" rx="25" />
+      <rect x="1090" y="340" width="120" height="120" rx="25" />
+
+      <rect x="342" y="467" width="136" height="136" rx="28" />
+      <rect x="535" y="491" width="120" height="120" rx="25" stroke="#55492F" />
+      <rect x="695" y="499" width="120" height="120" rx="25" />
+      <rect x="840" y="507" width="120" height="120" rx="25" />
+      <rect x="970" y="511" width="120" height="120" rx="25" />
+      <rect x="1090" y="515" width="120" height="120" rx="25" />
+
+      <rect x="342" y="642" width="136" height="136" rx="28" />
+      <rect x="535" y="666" width="120" height="120" rx="25" />
+      <rect x="695" y="674" width="120" height="120" rx="25" />
+      <rect x="840" y="682" width="120" height="120" rx="25" />
+      <rect x="970" y="686" width="120" height="120" rx="25" />
+      <rect x="1090" y="690" width="120" height="120" rx="25" />
+    </g>
+
+    <use href="#v1" x="362" y="312" width="96" height="96" />
+    <use href="#v1" x="563" y="344" width="64" height="64" />
+    <use href="#v1" x="731" y="360" width="48" height="48" />
+    <use href="#v1" x="884" y="376" width="32" height="32" />
+    <use href="#v1" x="1018" y="384" width="24" height="24" />
+    <use href="#v1" x="1142" y="392" width="16" height="16" />
+
+    <use href="#v2" x="362" y="487" width="96" height="96" />
+    <use href="#v2" x="563" y="519" width="64" height="64" />
+    <use href="#v2" x="731" y="535" width="48" height="48" />
+    <use href="#v2" x="884" y="551" width="32" height="32" />
+    <use href="#v2" x="1018" y="559" width="24" height="24" />
+    <use href="#v2" x="1142" y="567" width="16" height="16" />
+
+    <use href="#v3" x="362" y="662" width="96" height="96" />
+    <use href="#v3" x="563" y="694" width="64" height="64" />
+    <use href="#v3" x="731" y="710" width="48" height="48" />
+    <use href="#v3" x="884" y="726" width="32" height="32" />
+    <use href="#v3" x="1018" y="734" width="24" height="24" />
+    <use href="#v3" x="1142" y="742" width="16" height="16" />
+
+    <rect x="1280" y="292" width="230" height="486" rx="38" fill="#10131A" stroke="#2C2F40" />
+    <text x="1320" y="348" fill="#CBAE72" font-size="18" font-weight="700" letter-spacing="3">RESULT</text>
+    <text x="1320" y="405" fill="#F5F7FB" font-size="30" font-weight="700">V2 stays open</text>
+    <text x="1320" y="447" fill="#8991A4" font-size="20">Its two clean strokes</text>
+    <text x="1320" y="479" fill="#8991A4" font-size="20">remain identifiable at</text>
+    <text x="1320" y="511" fill="#8991A4" font-size="20">the smallest size.</text>
+    <line x1="1320" y1="558" x2="1470" y2="558" stroke="#CBAE72" stroke-width="3" />
+    <text x="1320" y="612" fill="#A99BFF" font-size="18" font-weight="700" letter-spacing="2">A+B PRINCIPLE</text>
+    <text x="1320" y="656" fill="#8991A4" font-size="20">Violet owns the mark.</text>
+    <text x="1320" y="688" fill="#8991A4" font-size="20">Champagne adds warmth</text>
+    <text x="1320" y="720" fill="#8991A4" font-size="20">around it—not inside it.</text>
+  </g>
+
+  <text x="90" y="910" fill="#586073" font-family="Arial, Helvetica, sans-serif" font-size="20">Brand-only exploration · no product code changed</text>
+</svg>

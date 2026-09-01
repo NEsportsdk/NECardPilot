@@ -346,11 +346,12 @@ const styles = `
     display: grid;
     place-items: center;
     margin-bottom: 20px;
-    padding: 9px;
+    padding: 6px;
     border-radius: 15px;
-    background: linear-gradient(135deg, #8b5cf6, #6d5ce7);
-    color: #ffffff;
-    box-shadow: 0 12px 28px rgba(124, 92, 255, 0.24);
+    border: 1px solid #292d3b;
+    background: #10141c;
+    color: #f5f7fb;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
   }
 
   .brand-mark :global(svg) {

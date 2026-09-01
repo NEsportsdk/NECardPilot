@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1200">
+  <title>Vallective V2 Open V brand system board</title>
+  <rect width="1800" height="1200" fill="#07090D" />
+  <circle cx="1745" cy="-20" r="390" fill="#121225" />
+
+  <g font-family="Geist, Inter, Arial, Helvetica, sans-serif">
+    <text x="96" y="92" fill="#A99BFF" font-size="24" font-weight="700" letter-spacing="8">VALLECTIVE BRAND SYSTEM</text>
+    <text x="96" y="172" fill="#F5F7FB" font-size="68" font-weight="700">V2 · Open V</text>
+    <text x="96" y="220" fill="#8991A4" font-size="25">Collector intelligence, refined into one clear and scalable mark.</text>
+
+    <rect x="86" y="286" width="1060" height="310" rx="38" fill="#10141C" stroke="#252A36" stroke-width="2" />
+    <text x="126" y="340" fill="#CBAE72" font-size="18" font-weight="700" letter-spacing="4">PRIMARY · DARK</text>
+    <g transform="translate(138 368) scale(.3125)">
+      <path d="M139 91L256 421" fill="none" stroke="#F5F7FB" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+      <path d="M373 91L256 421" fill="none" stroke="#7867FF" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+    </g>
+    <text x="330" y="486" fill="#F5F7FB" font-size="80" font-weight="700" letter-spacing="9">VALLECTIVE</text>
+    <text x="330" y="540" fill="#8991A4" font-size="24" letter-spacing="1.2">Collect what matters. Know what it's worth.</text>
+
+    <rect x="86" y="628" width="1060" height="310" rx="38" fill="#F5F7FB" />
+    <text x="126" y="682" fill="#7867FF" font-size="18" font-weight="700" letter-spacing="4">SECONDARY · LIGHT</text>
+    <g transform="translate(138 710) scale(.3125)">
+      <path d="M139 91L256 421" fill="none" stroke="#07090D" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+      <path d="M373 91L256 421" fill="none" stroke="#7867FF" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+    </g>
+    <text x="330" y="828" fill="#07090D" font-size="80" font-weight="700" letter-spacing="9">VALLECTIVE</text>
+    <text x="330" y="882" fill="#596173" font-size="24" letter-spacing="1.2">Collect what matters. Know what it's worth.</text>
+
+    <text x="1214" y="326" fill="#A99BFF" font-size="18" font-weight="700" letter-spacing="4">DIGITAL ICONS</text>
+    <rect x="1204" y="360" width="236" height="236" rx="54" fill="#10141C" stroke="#292D3B" stroke-width="2" />
+    <g transform="translate(1204 360) scale(.4609375)">
+      <path d="M139 91L256 421" fill="none" stroke="#F5F7FB" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+      <path d="M373 91L256 421" fill="none" stroke="#7867FF" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+    </g>
+    <circle cx="1600" cy="478" r="118" fill="#10141C" stroke="#CBAE72" stroke-width="4" />
+    <circle cx="1600" cy="478" r="100" fill="#0B0E14" stroke="#2A2D3C" stroke-width="2" />
+    <g transform="translate(1482 360) scale(.4609375)">
+      <path d="M139 91L256 421" fill="none" stroke="#F5F7FB" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+      <path d="M373 91L256 421" fill="none" stroke="#7867FF" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+    </g>
+    <text x="1322" y="630" fill="#8991A4" font-size="18" text-anchor="middle">App / PWA</text>
+    <text x="1600" y="630" fill="#8991A4" font-size="18" text-anchor="middle">Instagram</text>
+
+    <text x="1214" y="714" fill="#A99BFF" font-size="18" font-weight="700" letter-spacing="4">A+B PALETTE</text>
+    <rect x="1204" y="752" width="92" height="92" rx="22" fill="#07090D" stroke="#252A36" />
+    <rect x="1314" y="752" width="92" height="92" rx="22" fill="#10141C" stroke="#252A36" />
+    <rect x="1424" y="752" width="92" height="92" rx="22" fill="#F5F7FB" />
+    <rect x="1534" y="752" width="92" height="92" rx="22" fill="#7867FF" />
+    <rect x="1644" y="752" width="92" height="92" rx="22" fill="#CBAE72" />
+    <text x="1250" y="874" fill="#697084" font-size="15" text-anchor="middle">MIDNIGHT</text>
+    <text x="1360" y="874" fill="#697084" font-size="15" text-anchor="middle">SURFACE</text>
+    <text x="1470" y="874" fill="#697084" font-size="15" text-anchor="middle">PORCELAIN</text>
+    <text x="1580" y="874" fill="#697084" font-size="15" text-anchor="middle">VIOLET</text>
+    <text x="1690" y="874" fill="#697084" font-size="15" text-anchor="middle">CHAMPAGNE</text>
+
+    <line x1="96" y1="1016" x2="1704" y2="1016" stroke="#242936" stroke-width="2" />
+    <text x="96" y="1076" fill="#CBAE72" font-size="18" font-weight="700" letter-spacing="4">DESIGN PRINCIPLE</text>
+    <text x="96" y="1126" fill="#8991A4" font-size="23">Violet owns the identity. Champagne adds editorial warmth. Neither competes with the collection.</text>
+    <text x="1704" y="1126" fill="#586073" font-size="20" text-anchor="end">Brand-only package · product integration pending approval</text>
+  </g>
+</svg>

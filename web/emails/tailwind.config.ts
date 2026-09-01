@@ -6,15 +6,25 @@ export default {
     extend: {
       colors: {
         brand: {
-          accent: "#9f93ff",
-          background: "#080a10",
-          border: "#272b38",
-          button: "#7c5cff",
-          muted: "#a9afbd",
-          surface: "#11141d",
-          text: "#f8fafc",
+          accent: "#a99bff",
+          background: "#07090d",
+          border: "#292d3b",
+          button: "#7867ff",
+          champagne: "#cbae72",
+          muted: "#aab1c0",
+          surface: "#10141c",
+          text: "#f5f7fb",
         },
       },
     },
   },
 } satisfies TailwindConfig;
+
+export const brandAssets = {
+  logo: {
+    alt: "Vallective",
+    height: 52,
+    src: "https://vallective.com/icons/vallective-email-mark.png",
+    width: 52,
+  },
+} as const;

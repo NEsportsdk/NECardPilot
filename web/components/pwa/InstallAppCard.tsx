@@ -120,9 +120,10 @@ export default function InstallAppCard() {
           display: grid;
           place-items: center;
           border-radius: 16px;
-          background: linear-gradient(145deg, #a88cff, #6552e8);
-          color: #ffffff;
-          box-shadow: 0 12px 28px rgba(101, 82, 232, 0.28);
+          border: 1px solid #292d3b;
+          background: #10141c;
+          color: #f5f7fb;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
         }
 
         .install-mark :global(svg) {

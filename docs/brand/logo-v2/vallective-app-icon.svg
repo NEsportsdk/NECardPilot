@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>Vallective application icon</title>
+  <rect width="1024" height="1024" fill="#07090D" />
+  <rect x="38" y="38" width="948" height="948" rx="222" fill="#10141C" stroke="#292D3B" stroke-width="4" />
+  <g transform="translate(256 256)">
+    <path d="M139 91L256 421" fill="none" stroke="#F5F7FB" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+    <path d="M373 91L256 421" fill="none" stroke="#7867FF" stroke-linecap="round" stroke-linejoin="round" stroke-width="62" />
+  </g>
+</svg>

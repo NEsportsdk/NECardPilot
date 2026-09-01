@@ -15,6 +15,8 @@ describe("BetaPilotInvitationEmail", () => {
 
     expect(html).toContain('lang="en"');
     expect(html).toContain("Your Vallective private beta invitation");
+    expect(html).toContain("https://vallective.com/icons/vallective-email-mark.png");
+    expect(html).toContain('alt="Vallective"');
     expect(html).toContain("Start the Vallective pilot");
     expect(html).toContain(inviteUrl.replaceAll("&", "&amp;"));
     expect(text).toContain("Start the Vallective pilot");

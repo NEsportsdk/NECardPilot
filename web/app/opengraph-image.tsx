@@ -12,18 +12,20 @@ function BrandGlyph() {
   return (
     <svg height="132" viewBox="0 0 512 512" width="132">
       <path
-        d="M106 112c-4-13 3-27 16-31l42-13c13-4 27 3 31 16l80 263-36 93c-5 13-23 13-28 0L106 112Z"
-        fill="#FFFFFF"
+        d="M139 91L256 421"
+        fill="none"
+        stroke="#F5F7FB"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="62"
       />
       <path
-        d="M406 112c4-13-3-27-16-31l-42-13c-13-4-27 3-31 16l-80 263 36 93c5 13 23 13 28 0l105-328Z"
-        fill="#FFFFFF"
-        opacity="0.9"
-      />
-      <path
-        d="M151 116l18-6 9 29-18 6-9-29Zm201 0-18-6-9 29 18 6 9-29Z"
-        fill="#6950DC"
-        opacity="0.72"
+        d="M373 91L256 421"
+        fill="none"
+        stroke="#7867FF"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="62"
       />
     </svg>
   );
@@ -68,7 +70,7 @@ export default function OpenGraphImage() {
         >
           <span
             style={{
-              color: "#A99DFF",
+              color: "#A99BFF",
               fontSize: 20,
               fontWeight: 700,
               letterSpacing: "0.18em",
@@ -79,13 +81,13 @@ export default function OpenGraphImage() {
           </span>
           <strong
             style={{
-              fontSize: 78,
-              letterSpacing: "-0.055em",
+              fontSize: 62,
+              letterSpacing: "0.1em",
               lineHeight: 1,
               marginTop: 18,
             }}
           >
-            Vallective
+            VALLECTIVE
           </strong>
           <span
             style={{
@@ -119,10 +121,10 @@ export default function OpenGraphImage() {
         <div
           style={{
             alignItems: "center",
-            background: "linear-gradient(145deg, #A88CFF, #6552E8)",
-            border: "1px solid rgba(255,255,255,0.18)",
+            background: "#10141C",
+            border: "1px solid #292D3B",
             borderRadius: 54,
-            boxShadow: "0 28px 80px rgba(81, 61, 195, 0.42)",
+            boxShadow: "0 28px 80px rgba(0, 0, 0, 0.42)",
             display: "flex",
             height: 244,
             justifyContent: "center",

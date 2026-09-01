@@ -10,8 +10,9 @@
   --text-muted: #8d96a8;
   --text-subtle: #5d6678;
   --accent: #7867ff;
-  --accent-bright: #9589ff;
+  --accent-bright: #a99bff;
   --accent-soft: rgba(120, 103, 255, 0.14);
+  --champagne: #cbae72;
   --success: #55d6a2;
   --danger: #ff708a;
   --sidebar-width: 260px;
@@ -36,8 +37,8 @@ body {
     var(--background);
   color: var(--text);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+    var(--font-geist-sans), Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 button,
@@ -86,8 +87,10 @@ button:disabled {
   place-items: center;
   font-size: 17px;
   font-weight: 800;
-  background: linear-gradient(145deg, var(--accent-bright), #5744ed);
-  box-shadow: 0 10px 30px rgba(120, 103, 255, 0.28);
+  border: 1px solid #292d3b;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
 }
 
 .brand-name {
@@ -1261,9 +1264,10 @@ button:disabled {
   display: grid;
   place-items: center;
   border-radius: 22px;
-  background: linear-gradient(145deg, #a88cff, #6552e8);
-  color: #ffffff;
-  box-shadow: 0 18px 45px rgba(101, 82, 232, 0.3);
+  border: 1px solid #292d3b;
+  background: #10141c;
+  color: #f5f7fb;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.3);
 }
 
 .route-loading-mark svg {

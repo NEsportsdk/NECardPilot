@@ -206,11 +206,12 @@ export default function AppSidebar({
           place-items: center;
           flex: 0 0 auto;
           border-radius: 15px;
-          background: linear-gradient(145deg, #9b82ff, #6552e8);
-          color: #ffffff;
+          border: 1px solid #292d3b;
+          background: #10141c;
+          color: #f5f7fb;
           font-size: 20px;
           font-weight: 900;
-          box-shadow: 0 14px 35px rgba(124, 92, 255, 0.28);
+          box-shadow: 0 14px 35px rgba(0, 0, 0, 0.3);
         }
 
         .brand-mark :global(svg) {
