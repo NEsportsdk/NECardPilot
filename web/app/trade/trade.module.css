@@ -132,6 +132,58 @@
   color: #f9d58a;
 }
 
+.inviteActions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.inviteActions form,
+.inviteActions p {
+  margin: 0;
+}
+
+.inviteActions button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(167, 139, 250, 0.38);
+  border-radius: 11px;
+  background: linear-gradient(135deg, #8b7cff, #6552e8);
+  color: #fff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.inviteActions button:focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 3px;
+}
+
+.inviteActions p {
+  max-width: 210px;
+  color: #fca5a5;
+  font-size: 9px;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.sentPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 29px;
+  padding: 0 12px;
+  border: 1px solid rgba(110, 231, 183, 0.2);
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.08);
+  color: #a7f3d0;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
 .metricGrid {
   max-width: 1240px;
   margin: 0 auto 20px;
@@ -630,6 +682,15 @@
   .statusPill {
     grid-column: 2;
     width: fit-content;
+  }
+
+  .inviteActions {
+    grid-column: 2;
+    justify-items: start;
+  }
+
+  .inviteActions p {
+    text-align: left;
   }
 
   .metricGrid {

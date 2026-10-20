@@ -5,6 +5,7 @@ import AppSidebar from "@/components/app/AppSidebar";
 import { defaultTradeTerms } from "@/lib/trade/tradeDesk";
 import { loadTradeDesk } from "@/lib/trade/tradeDesk.server";
 
+import { sendPendingTradeTeamInvitationAction } from "./actions";
 import styles from "./trade.module.css";
 
 export const metadata: Metadata = {
@@ -26,7 +27,12 @@ function formatPercent(value: number) {
   }).format(value);
 }
 
-export default async function TradeDeskPage() {
+export default async function TradeDeskPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string }>;
+}) {
+  const { invite } = await searchParams;
   const { member, metrics, viewerRole } = await loadTradeDesk();
   const memberName = member?.display_name ?? "Noah";
   const workspaceName = member?.workspace_name ?? "Vallective Business";
@@ -82,7 +88,21 @@ export default async function TradeDeskPage() {
                 ingen grænse for, hvor mange kort han kan håndtere bagefter.
               </p>
             </div>
-            <span className={styles.statusPill}>Afventer konto</span>
+            <div className={styles.inviteActions}>
+              {invite === "sent" ? (
+                <span className={styles.sentPill}>Invitation sendt</span>
+              ) : (
+                <form action={sendPendingTradeTeamInvitationAction}>
+                  <button type="submit">Send invitation</button>
+                </form>
+              )}
+              {invite === "failed" ? (
+                <p role="alert">
+                  Invitationen kunne ikke sendes. Prøv igen om et øjeblik.
+                </p>
+              ) : null}
+              <span className={styles.statusPill}>Afventer konto</span>
+            </div>
           </section>
         ) : null}
 
