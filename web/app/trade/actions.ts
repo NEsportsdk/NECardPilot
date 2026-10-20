@@ -30,20 +30,10 @@ export async function sendPendingTradeTeamInvitationAction() {
     redirect("/login?next=%2Ftrade");
   }
 
-  const { data: ownerAccess, error: ownerAccessError } = await supabase
-    .from("beta_feedback_admins")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (ownerAccessError || !ownerAccess) {
-    redirect("/");
-  }
-
   const { data, error } = await supabase
     .from("vallective_team_invitations")
     .select("id,email,display_name,send_attempts,status")
-    .eq("owner_user_id", user.id)
+    .or(`owner_user_id.eq.${user.id},invited_by.eq.${user.id}`)
     .in("status", ["pending", "failed"])
     .order("created_at", { ascending: false })
     .limit(1)
@@ -89,8 +79,7 @@ export async function sendPendingTradeTeamInvitationAction() {
         status: "failed",
         updated_at: now,
       })
-      .eq("id", invitation.id)
-      .eq("owner_user_id", user.id);
+      .eq("id", invitation.id);
 
     console.warn("Vallective team invitation provider rejected the email", {
       errorCode: sendResult.errorCode,
@@ -111,8 +100,7 @@ export async function sendPendingTradeTeamInvitationAction() {
       status: "sent",
       updated_at: now,
     })
-    .eq("id", invitation.id)
-    .eq("owner_user_id", user.id);
+    .eq("id", invitation.id);
 
   if (updateError) {
     console.error("Sent Vallective team invitation was not recorded", {

@@ -32,11 +32,13 @@ export async function loadTradeDesk(): Promise<TradeDeskData> {
     redirect("/login?next=%2Ftrade");
   }
 
-  const [ownerAccessResult, membershipResult] = await Promise.all([
+  const [workspaceAccessResult, membershipResult] = await Promise.all([
     supabase
-      .from("beta_feedback_admins")
-      .select("user_id")
-      .eq("user_id", user.id)
+      .from("vallective_team_invitations")
+      .select("owner_user_id,invited_by")
+      .or(`owner_user_id.eq.${user.id},invited_by.eq.${user.id}`)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle(),
     supabase
       .from("vallective_team_members")
@@ -51,14 +53,22 @@ export async function loadTradeDesk(): Promise<TradeDeskData> {
     throw membershipResult.error;
   }
 
-  const viewerMembership = membershipResult.data as TradeMember | null;
-  const isOwner = Boolean(ownerAccessResult.data);
+  if (workspaceAccessResult.error) {
+    throw workspaceAccessResult.error;
+  }
 
-  if (!isOwner && !viewerMembership) {
+  const viewerMembership = membershipResult.data as TradeMember | null;
+  const workspaceAccess = workspaceAccessResult.data as {
+    invited_by: string | null;
+    owner_user_id: string;
+  } | null;
+
+  if (!workspaceAccess && !viewerMembership) {
     redirect("/");
   }
 
-  const ownerUserId = viewerMembership?.owner_user_id ?? user.id;
+  const ownerUserId =
+    viewerMembership?.owner_user_id ?? workspaceAccess!.owner_user_id;
   const memberResult = viewerMembership
     ? { data: viewerMembership, error: null }
     : await supabase
@@ -118,6 +128,8 @@ export async function loadTradeDesk(): Promise<TradeDeskData> {
       member,
       transactions: (transactionsResult.data ?? []) as TradeTransaction[],
     }),
-    viewerRole: viewerMembership?.role ?? "owner",
+    viewerRole:
+      viewerMembership?.role ??
+      (workspaceAccess?.owner_user_id === user.id ? "owner" : "administrator"),
   };
 }

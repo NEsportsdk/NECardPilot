@@ -36,7 +36,8 @@ export default async function TradeDeskPage({
   const { member, metrics, viewerRole } = await loadTradeDesk();
   const memberName = member?.display_name ?? "Noah";
   const workspaceName = member?.workspace_name ?? "Vallective Business";
-  const isMemberView = viewerRole !== "owner";
+  const isMemberView =
+    viewerRole === "junior_trade_manager" || viewerRole === "trade_manager";
   const hourlyRate = Number(member?.hourly_rate ?? defaultTradeTerms.hourlyRate);
   const weeklyHours = Number(
     member?.weekly_hours_target ?? defaultTradeTerms.weeklyHoursTarget
