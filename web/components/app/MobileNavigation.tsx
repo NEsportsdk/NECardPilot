@@ -103,6 +103,13 @@ function NavigationIcon({ icon }: { icon: MobileNavigationIcon }) {
           <path d="M4 19.5h16M6.5 17V11M12 17V5M17.5 17V8.5" />
         </svg>
       );
+    case "trade":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 18.5h16M6.5 15l3.2-3.2 2.6 2.4L18 8.5" />
+          <path d="M14.5 8.5H18v3.6" />
+        </svg>
+      );
     case "feedback":
       return (
         <svg {...commonProps}>

@@ -9,6 +9,7 @@ import {
   getSafeNextPath,
 } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
+import { acceptPendingTradeTeamInvitation } from "@/lib/trade/acceptTeamInvitation";
 
 function signupUrl(
   nextPath: string,
@@ -71,6 +72,7 @@ export async function signup(formData: FormData) {
   }
 
   if (data.session && data.user) {
+    await acceptPendingTradeTeamInvitation(supabase);
     revalidatePath("/", "layout");
     redirect(nextPath);
   }

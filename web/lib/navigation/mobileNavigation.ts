@@ -10,6 +10,7 @@ export type MobileNavigationIcon =
   | "more"
   | "scanner"
   | "settings"
+  | "trade"
   | "transactions";
 
 export type MobileNavigationItem = {
@@ -70,6 +71,12 @@ export const mobileMoreNavigation: MobileNavigationItem[] = [
     icon: "analytics",
     label: "Analytics",
     matches: (pathname) => pathname.startsWith("/analytics"),
+  },
+  {
+    href: "/trade",
+    icon: "trade",
+    label: "Handel",
+    matches: (pathname) => pathname.startsWith("/trade"),
   },
   {
     href: "/beta",

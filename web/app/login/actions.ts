@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { validateEmail } from "@/lib/auth/forms";
 import { getSafeNextPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
+import { acceptPendingTradeTeamInvitation } from "@/lib/trade/acceptTeamInvitation";
 
 function loginErrorMessage(message: string) {
   const normalized = message.toLowerCase();
@@ -65,6 +66,8 @@ export async function login(formData: FormData) {
       nextPath
     );
   }
+
+  await acceptPendingTradeTeamInvitation(supabase);
 
   revalidatePath("/", "layout");
   redirect(nextPath);

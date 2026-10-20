@@ -331,6 +331,19 @@ export default function TransactionsPage() {
     setLoading(true);
     setMessage("");
 
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setMessage("Log in again to view your transactions.");
+      setTransactions([]);
+      setCollections([]);
+      setLoading(false);
+      return;
+    }
+
     const [transactionResult, collectionResult] = await Promise.all([
       supabase
         .from("card_transactions")
@@ -358,6 +371,7 @@ export default function TransactionsPage() {
           card_state_before,
           created_at
         `)
+        .eq("user_id", user.id)
         .order("occurred_at", { ascending: false }),
 
       supabase
@@ -368,6 +382,7 @@ export default function TransactionsPage() {
           type,
           currency
         `)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: true }),
     ]);
 

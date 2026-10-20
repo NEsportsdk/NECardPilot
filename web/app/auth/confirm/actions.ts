@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/confirmation";
 import { getSafeNextPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
+import { acceptPendingTradeTeamInvitation } from "@/lib/trade/acceptTeamInvitation";
 
 export async function confirmAuthLink(formData: FormData) {
   const code = getAuthSecret(formData.get("code"));
@@ -40,6 +41,8 @@ export async function confirmAuthLink(formData: FormData) {
     });
     redirect("/auth/error");
   }
+
+  await acceptPendingTradeTeamInvitation(supabase);
 
   revalidatePath("/", "layout");
   redirect(nextPath);

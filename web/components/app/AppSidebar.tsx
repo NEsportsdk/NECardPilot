@@ -80,6 +80,12 @@ const navigation: NavigationItem[] = [
     matches: (pathname) => pathname.startsWith("/analytics"),
   },
   {
+    label: "Handel",
+    icon: "↗",
+    href: "/trade",
+    matches: (pathname) => pathname.startsWith("/trade"),
+  },
+  {
     label: "Beta pilot",
     icon: "◉",
     href: "/beta",
