@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -383,27 +384,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await supabase.rpc("create_purchase_lot", {
-      p_name: name,
-      p_allocation_method: allocationMethod,
-      p_source: source,
-      p_seller: seller,
-      p_purchase_reference: purchaseReference,
-      p_purchased_at: purchasedAt,
-      p_currency: currency,
-      p_purchase_amount: purchaseAmount,
-      p_buyer_fee: buyerFee,
-      p_shipping_cost: shippingCost,
-      p_taxes: taxes,
-      p_other_costs: otherCosts,
-      p_notes: notes,
-      p_cards: cards,
-      p_lock: lock,
-      p_overwrite_existing_purchase_price: overwriteExistingPurchasePrice,
-    });
+    const workspace = await resolveActiveWorkspace(supabase);
+
+    const { data, error } = await supabase.rpc(
+      "create_workspace_purchase_lot",
+      {
+        p_workspace_id: workspace.id,
+        p_name: name,
+        p_allocation_method: allocationMethod,
+        p_source: source,
+        p_seller: seller,
+        p_purchase_reference: purchaseReference,
+        p_purchased_at: purchasedAt,
+        p_currency: currency,
+        p_purchase_amount: purchaseAmount,
+        p_buyer_fee: buyerFee,
+        p_shipping_cost: shippingCost,
+        p_taxes: taxes,
+        p_other_costs: otherCosts,
+        p_notes: notes,
+        p_cards: cards,
+        p_lock: lock,
+        p_overwrite_existing_purchase_price: overwriteExistingPurchasePrice,
+      }
+    );
 
     if (error) {
-      console.error("create_purchase_lot failed:", error);
+      console.error("create_workspace_purchase_lot failed:", error);
       throw new RequestError(
         error.message || "Købslottet kunne ikke oprettes.",
         getRpcErrorStatus(error)

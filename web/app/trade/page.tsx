@@ -5,7 +5,6 @@ import AppSidebar from "@/components/app/AppSidebar";
 import { defaultTradeTerms } from "@/lib/trade/tradeDesk";
 import { loadTradeDesk } from "@/lib/trade/tradeDesk.server";
 
-import { sendPendingTradeTeamInvitationAction } from "./actions";
 import styles from "./trade.module.css";
 
 export const metadata: Metadata = {
@@ -33,21 +32,24 @@ export default async function TradeDeskPage({
   searchParams: Promise<{ invite?: string }>;
 }) {
   const { invite } = await searchParams;
-  const { member, metrics, viewerRole } = await loadTradeDesk();
-  const memberName = member?.display_name ?? "Noah";
-  const workspaceName = member?.workspace_name ?? "Vallective Business";
+  const { invitation, member, metrics, viewerRole } = await loadTradeDesk();
+  const operator = member ?? invitation;
+  const memberName = operator?.display_name ?? "Noah";
+  const workspaceName = operator?.workspace_name ?? "Vallective Business";
   const isMemberView =
     viewerRole === "junior_trade_manager" || viewerRole === "trade_manager";
-  const hourlyRate = Number(member?.hourly_rate ?? defaultTradeTerms.hourlyRate);
+  const hourlyRate = Number(
+    operator?.hourly_rate ?? defaultTradeTerms.hourlyRate
+  );
   const weeklyHours = Number(
-    member?.weekly_hours_target ?? defaultTradeTerms.weeklyHoursTarget
+    operator?.weekly_hours_target ?? defaultTradeTerms.weeklyHoursTarget
   );
   const existingCommissionRate = Number(
-    member?.existing_inventory_commission_rate ??
+    operator?.existing_inventory_commission_rate ??
       defaultTradeTerms.existingInventoryCommissionRate
   );
   const sourcedCommissionRate = Number(
-    member?.sourced_profit_commission_rate ??
+    operator?.sourced_profit_commission_rate ??
       defaultTradeTerms.sourcedProfitCommissionRate
   );
 
@@ -90,13 +92,7 @@ export default async function TradeDeskPage({
               </p>
             </div>
             <div className={styles.inviteActions}>
-              {invite === "sent" ? (
-                <span className={styles.sentPill}>Invitation sendt</span>
-              ) : (
-                <form action={sendPendingTradeTeamInvitationAction}>
-                  <button type="submit">Send invitation</button>
-                </form>
-              )}
+              <span className={styles.sentPill}>Klar — ikke sendt</span>
               {invite === "failed" ? (
                 <p role="alert">
                   Invitationen kunne ikke sendes. Prøv igen om et øjeblik.
@@ -295,8 +291,8 @@ export default async function TradeDeskPage({
             <div className={styles.guardrail}>
               <span aria-hidden="true">✓</span>
               <p>
-                Indkøb tæller først med, når et Noah-fundet kort er registreret
-                som gennemført handel.
+                Hvert køb reserveres atomisk i databasen. Systemet afviser
+                automatisk beløb over månedsrammen og fører et revisionsspor.
               </p>
             </div>
           </section>
@@ -320,10 +316,19 @@ export default async function TradeDeskPage({
                   </div>
                 </div>
                 <ul className={styles.permissionList}>
-                  <li>Registrere og redigere hele virksomhedens lager</li>
-                  <li>Værdisætte, klargøre og styre salg</li>
-                  <li>Arbejde med grading og cardshows</li>
-                  <li>Foretage indkøb inden for månedsbudgettet</li>
+                  {operator?.can_manage_inventory ? (
+                    <li>Registrere og redigere hele virksomhedens lager</li>
+                  ) : null}
+                  {operator?.can_manage_sales ? (
+                    <li>Værdisætte, klargøre og styre salg</li>
+                  ) : null}
+                  {operator?.can_manage_grading &&
+                  operator.can_manage_cardshows ? (
+                    <li>Arbejde med grading og cardshows</li>
+                  ) : null}
+                  {operator?.can_manage_purchases_within_budget ? (
+                    <li>Foretage indkøb inden for månedsbudgettet</li>
+                  ) : null}
                 </ul>
               </article>
 
@@ -346,9 +351,15 @@ export default async function TradeDeskPage({
 
             <div className={styles.ownerGuardrails}>
               <strong>Forbliver hos dig:</strong>
-              <span>Teamadministration</span>
-              <span>Indkøb over den aftalte budgetramme</span>
-              <span>Irreversible sletninger</span>
+              {!operator?.can_manage_team ? (
+                <span>Teamadministration</span>
+              ) : null}
+              {!operator?.can_approve_over_budget_purchases ? (
+                <span>Indkøb over den aftalte budgetramme</span>
+              ) : null}
+              {!operator?.can_delete_inventory ? (
+                <span>Irreversible sletninger</span>
+              ) : null}
             </div>
           </section>
         </div>

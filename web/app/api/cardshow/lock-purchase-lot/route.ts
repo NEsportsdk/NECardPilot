@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -133,13 +134,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await supabase.rpc("lock_purchase_lot", {
+    const workspace = await resolveActiveWorkspace(supabase);
+
+    const { data, error } = await supabase.rpc("lock_workspace_purchase_lot", {
+      p_workspace_id: workspace.id,
       p_lot_id: lotId,
       p_overwrite_existing_purchase_price: overwriteExistingPurchasePrice,
     });
 
     if (error) {
-      console.error("lock_purchase_lot failed:", error);
+      console.error("lock_workspace_purchase_lot failed:", error);
       throw new RequestError(
         error.message || "Købslottet kunne ikke låses.",
         getRpcErrorStatus(error)

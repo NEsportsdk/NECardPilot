@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -429,9 +430,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const workspace = await resolveActiveWorkspace(supabase);
+
     const { data, error } = await supabase.rpc(
-      "create_grading_submission",
+      "create_workspace_grading_submission",
       {
+        p_workspace_id: workspace.id,
         p_name: name,
         p_grading_company: gradingCompany,
         p_service_level: serviceLevel,
@@ -449,7 +453,7 @@ export async function POST(request: Request) {
     );
 
     if (error) {
-      console.error("create_grading_submission failed:", error);
+      console.error("create_workspace_grading_submission failed:", error);
 
       throw new RequestError(
         error.message || "The grading submission could not be created.",

@@ -1,6 +1,7 @@
 export type NumericDatabaseValue = number | string | null;
 
 export type TradeMember = {
+  workspace_id: string;
   owner_user_id: string;
   member_user_id: string;
   role: "administrator" | "junior_trade_manager" | "trade_manager";
@@ -22,6 +23,14 @@ export type TradeMember = {
   sourced_profit_commission_rate: NumericDatabaseValue;
   monthly_purchase_budget: NumericDatabaseValue;
   first_mission_target: number;
+};
+
+export type TradeInvitation = Omit<
+  TradeMember,
+  "member_user_id" | "preferred_language" | "status"
+> & {
+  email: string;
+  status: "accepted" | "failed" | "pending" | "revoked" | "sent";
 };
 
 export type TradeCard = {
@@ -52,6 +61,14 @@ export type TradeTransaction = {
   shipping_cost: NumericDatabaseValue;
   other_costs: NumericDatabaseValue;
   realized_profit: NumericDatabaseValue;
+};
+
+export type TradePurchaseLot = {
+  created_by_user_id: string;
+  status: "allocated" | "cancelled" | "draft" | "locked";
+  purchased_at: string;
+  currency: string;
+  total_cost: NumericDatabaseValue;
 };
 
 export type TradeDeskMetrics = {
@@ -89,14 +106,18 @@ function toNumber(value: NumericDatabaseValue) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
 }
-function isInSameUtcMonth(dateValue: string, now: Date) {
+const copenhagenMonthFormatter = new Intl.DateTimeFormat("en-CA", {
+  month: "2-digit",
+  timeZone: "Europe/Copenhagen",
+  year: "numeric",
+});
+
+function isInSameCopenhagenMonth(dateValue: string, now: Date) {
   const date = new Date(dateValue);
 
-  return (
-    Number.isFinite(date.getTime()) &&
-    date.getUTCFullYear() === now.getUTCFullYear() &&
-    date.getUTCMonth() === now.getUTCMonth()
-  );
+  return Number.isFinite(date.getTime()) &&
+    copenhagenMonthFormatter.format(date) ===
+      copenhagenMonthFormatter.format(now);
 }
 
 function getInventoryValue(card: TradeCard) {
@@ -120,14 +141,19 @@ export function calculateTradeDeskMetrics({
   cards,
   member,
   now = new Date(),
+  purchaseLots = [],
+  terms,
   transactions,
 }: {
   assignments: TradeCardAssignment[];
   cards: TradeCard[];
   member: TradeMember | null;
   now?: Date;
+  purchaseLots?: TradePurchaseLot[];
+  terms?: TradeInvitation | TradeMember | null;
   transactions: TradeTransaction[];
 }): TradeDeskMetrics {
+  const agreement = terms ?? member;
   const memberUserId = member?.member_user_id ?? null;
   const memberAssignments = memberUserId
     ? assignments.filter(
@@ -145,18 +171,12 @@ export function calculateTradeDeskMetrics({
     (transaction) =>
       transaction.status === "completed" &&
       transaction.currency.toUpperCase() === "DKK" &&
-      isInSameUtcMonth(transaction.occurred_at, now) &&
+      isInSameCopenhagenMonth(transaction.occurred_at, now) &&
       assignmentsByCard.has(transaction.card_id)
   );
 
   const monthlySales = completedMonthlyTransactions.filter(
     (transaction) => transaction.transaction_type === "sale"
-  );
-  const monthlyPurchases = completedMonthlyTransactions.filter(
-    (transaction) =>
-      transaction.transaction_type === "purchase" &&
-      assignmentsByCard.get(transaction.card_id)?.inventory_origin ===
-        "member_sourced"
   );
   const monthlyRevenue = monthlySales.reduce(
     (sum, transaction) =>
@@ -165,11 +185,11 @@ export function calculateTradeDeskMetrics({
       toNumber(transaction.shipping_income),
     0
   );
-  const existingInventoryCommissionRate = member
-    ? toNumber(member.existing_inventory_commission_rate)
+  const existingInventoryCommissionRate = agreement
+    ? toNumber(agreement.existing_inventory_commission_rate)
     : defaultTradeTerms.existingInventoryCommissionRate;
-  const sourcedProfitCommissionRate = member
-    ? toNumber(member.sourced_profit_commission_rate)
+  const sourcedProfitCommissionRate = agreement
+    ? toNumber(agreement.sourced_profit_commission_rate)
     : defaultTradeTerms.sourcedProfitCommissionRate;
   const existingInventoryCommission = monthlySales.reduce(
     (sum, transaction) => {
@@ -201,21 +221,22 @@ export function calculateTradeDeskMetrics({
         sourcedProfitCommissionRate
     );
   }, 0);
-  const monthlyPurchaseBudget = member
-    ? toNumber(member.monthly_purchase_budget)
+  const monthlyPurchaseBudget = agreement
+    ? toNumber(agreement.monthly_purchase_budget)
     : defaultTradeTerms.monthlyPurchaseBudget;
-  const monthlyPurchaseBudgetUsed = monthlyPurchases.reduce(
-    (sum, transaction) =>
-      sum +
-      toNumber(transaction.item_amount) +
-      toNumber(transaction.platform_fee) +
-      toNumber(transaction.payment_fee) +
-      toNumber(transaction.shipping_cost) +
-      toNumber(transaction.other_costs),
-    0
-  );
+  const monthlyPurchaseBudgetUsed = memberUserId
+    ? purchaseLots
+        .filter(
+          (lot) =>
+            lot.created_by_user_id === memberUserId &&
+            lot.status !== "cancelled" &&
+            lot.currency.toUpperCase() === "DKK" &&
+            isInSameCopenhagenMonth(lot.purchased_at, now)
+        )
+        .reduce((sum, lot) => sum + toNumber(lot.total_cost), 0)
+    : 0;
   const firstMissionTarget =
-    member?.first_mission_target ?? defaultTradeTerms.firstMissionTarget;
+    agreement?.first_mission_target ?? defaultTradeTerms.firstMissionTarget;
   const valuedCardCount = assignedCards.filter(
     (card) =>
       toNumber(card.market_estimated_value) > 0 ||

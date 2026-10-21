@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -356,16 +357,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const workspace = await resolveActiveWorkspace(supabase);
+
     const { data, error } = await supabase.rpc(
-      "upsert_cardshow_inventory_items",
+      "upsert_workspace_cardshow_inventory_items",
       {
+        p_workspace_id: workspace.id,
         p_event_id: eventId,
         p_items: items,
       }
     );
 
     if (error) {
-      console.error("upsert_cardshow_inventory_items failed:", error);
+      console.error("upsert_workspace_cardshow_inventory_items failed:", error);
       throw new RequestError(
         error.message || "Cardshow-inventory kunne ikke opdateres.",
         getRpcErrorStatus(error)
