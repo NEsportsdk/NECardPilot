@@ -6,6 +6,7 @@ import {
 } from "@/lib/cards/duplicateCards";
 import { findDuplicateCards } from "@/lib/cards/findDuplicateCards";
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 
@@ -108,10 +109,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const workspace = await resolveActiveWorkspace(supabase);
     const result = await findDuplicateCards(
       supabase,
-      user.id,
-      identity
+      workspace.dataOwnerUserId,
+      identity,
+      workspace.id
     );
 
     return NextResponse.json(result);

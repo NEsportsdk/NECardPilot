@@ -15,7 +15,8 @@ type CollectionNameRow = {
 export async function findDuplicateCards(
   supabase: SupabaseClient,
   userId: string,
-  identity: DuplicateCardIdentity
+  identity: DuplicateCardIdentity,
+  workspaceId?: string
 ): Promise<DuplicateCardCheckResult> {
   if (!identity.playerName?.trim()) {
     return {
@@ -24,13 +25,19 @@ export async function findDuplicateCards(
     };
   }
 
-  const { data, error } = await supabase
+  let cardQuery = supabase
     .from("cards")
     .select(
       "id,current_collection_id,player_name,year,manufacturer,set_name,card_number,parallel_name,serial_number,state,created_at"
     )
     .eq("user_id", userId)
-    .ilike("player_name", identity.playerName.trim())
+    .ilike("player_name", identity.playerName.trim());
+
+  if (workspaceId) {
+    cardQuery = cardQuery.eq("workspace_id", workspaceId);
+  }
+
+  const { data, error } = await cardQuery
     .order("created_at", {
       ascending: false,
     })
@@ -60,14 +67,20 @@ export async function findDuplicateCards(
   >();
 
   if (collectionIds.length > 0) {
-    const {
-      data: collectionData,
-      error: collectionError,
-    } = await supabase
+    let collectionQuery = supabase
       .from("collections")
       .select("id,name")
       .eq("user_id", userId)
       .in("id", collectionIds);
+
+    if (workspaceId) {
+      collectionQuery = collectionQuery.eq("workspace_id", workspaceId);
+    }
+
+    const {
+      data: collectionData,
+      error: collectionError,
+    } = await collectionQuery;
 
     if (collectionError) {
       throw new Error(

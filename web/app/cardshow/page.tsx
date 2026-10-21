@@ -19,6 +19,7 @@ import type { CreatePurchaseLotResult } from "@/lib/cardshow/createPurchaseLot";
 import { lockPurchaseLot } from "@/lib/cardshow/lockPurchaseLot";
 import type { UpsertCardshowInventoryResult } from "@/lib/cardshow/upsertCardshowInventory";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const CreatePurchaseLotModal = dynamic(
   () => import("@/components/cardshow/CreatePurchaseLotModal")
@@ -328,6 +329,8 @@ export default function CardshowCenterPage() {
       return;
     }
 
+    const workspace = await loadActiveWorkspace(supabase);
+
     const [eventResult, inventoryResult, lotResult] = await Promise.all([
       supabase
         .from("cardshow_events")
@@ -352,7 +355,7 @@ export default function CardshowCenterPage() {
           created_at,
           updated_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("starts_at", { ascending: false, nullsFirst: false }),
 
       supabase
@@ -368,7 +371,7 @@ export default function CardshowCenterPage() {
           location_label,
           added_at
         `)
-        .eq("user_id", user.id),
+        .eq("user_id", workspace.dataOwnerUserId),
 
       supabase
         .from("purchase_lots")
@@ -388,7 +391,7 @@ export default function CardshowCenterPage() {
           locked_at,
           created_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("purchased_at", { ascending: false })
         .limit(10),
     ]);
@@ -431,7 +434,7 @@ export default function CardshowCenterPage() {
           previous_purchase_price,
           cost_locked_at
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", workspace.dataOwnerUserId)
         .in(
           "lot_id",
           lotRows.map((lot) => lot.id)
@@ -459,7 +462,7 @@ export default function CardshowCenterPage() {
               card_number,
               parallel_name
             `)
-            .eq("user_id", user.id)
+            .eq("workspace_id", workspace.id)
             .in("id", cardIds)
             .limit(5000);
 

@@ -12,6 +12,7 @@ import {
 
 import AppSidebar from "@/components/app/AppSidebar";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 type NumericDatabaseValue = number | string | null;
 type CollectionType = "pc" | "inventory";
@@ -496,6 +497,8 @@ export default function AnalyticsPage() {
       return;
     }
 
+    const workspace = await loadActiveWorkspace(supabase);
+
     const [collectionResult, cardResult, saleResult] =
       await Promise.all([
         supabase
@@ -507,7 +510,7 @@ export default function AnalyticsPage() {
             currency,
             created_at
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: true }),
 
         supabase
@@ -531,7 +534,7 @@ export default function AnalyticsPage() {
             state,
             created_at
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: false }),
 
         supabase
@@ -555,7 +558,7 @@ export default function AnalyticsPage() {
             counterparty,
             reference
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .eq("transaction_type", "sale")
           .eq("status", "completed")
           .order("occurred_at", { ascending: false }),
@@ -603,7 +606,7 @@ export default function AnalyticsPage() {
           attribute_key,
           attribute_value
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", workspace.dataOwnerUserId)
         .in(
           "card_id",
           cardRows.map((card) => card.id)

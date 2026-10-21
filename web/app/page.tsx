@@ -17,6 +17,8 @@ import AppSidebar from "@/components/app/AppSidebar";
 import { useCurrentUserIdentity } from "@/components/auth/AuthenticatedUserCard";
 import FirstRunOnboarding from "@/components/onboarding/FirstRunOnboarding";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
+import type { Workspace } from "@/lib/workspaces/workspace";
 
 const CARD_IMAGE_BUCKET = "card-images";
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -338,6 +340,7 @@ export default function HomePage() {
   const [saleTransactions, setSaleTransactions] = useState<
     SaleTransaction[]
   >([]);
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
 
   const [name, setName] = useState("");
   const [type, setType] = useState<CollectionType>("pc");
@@ -362,6 +365,24 @@ export default function HomePage() {
       return;
     }
 
+    let workspace: Workspace;
+
+    try {
+      workspace = await loadActiveWorkspace(supabase);
+      setActiveWorkspace(workspace);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Workspace could not be loaded."
+      );
+      setCollections([]);
+      setCards([]);
+      setSaleTransactions([]);
+      setLoading(false);
+      return;
+    }
+
     const [collectionResult, cardResult, saleResult] = await Promise.all([
       supabase
         .from("collections")
@@ -372,7 +393,7 @@ export default function HomePage() {
           currency,
           created_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: true }),
 
       supabase
@@ -396,7 +417,7 @@ export default function HomePage() {
           state,
           created_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false }),
 
       supabase
@@ -416,7 +437,7 @@ export default function HomePage() {
           counterparty,
           reference
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .eq("transaction_type", "sale")
         .eq("status", "completed")
         .order("occurred_at", { ascending: false }),
@@ -543,22 +564,35 @@ export default function HomePage() {
     setSaving(true);
     setCreateMessage("");
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    let workspace = activeWorkspace;
 
-    if (userError || !user) {
-      setCreateMessage("Du er ikke logget ind.");
+    if (!workspace) {
+      try {
+        workspace = await loadActiveWorkspace(supabase);
+        setActiveWorkspace(workspace);
+      } catch (error) {
+        setCreateMessage(
+          error instanceof Error
+            ? error.message
+            : "Workspace could not be loaded."
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
+    if (!workspace.canManageInventory) {
+      setCreateMessage("Du har ikke adgang til at oprette samlinger her.");
       setSaving(false);
       return;
     }
 
     const { error } = await supabase.from("collections").insert({
-      user_id: user.id,
+      user_id: workspace.dataOwnerUserId,
+      workspace_id: workspace.id,
       name: name.trim(),
-      type,
-      currency: "DKK",
+      type: workspace.kind === "business" ? "inventory" : type,
+      currency: workspace.baseCurrency,
     });
 
     if (error) {

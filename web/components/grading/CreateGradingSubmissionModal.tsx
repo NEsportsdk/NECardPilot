@@ -13,6 +13,7 @@ import {
   type CreateGradingSubmissionResult,
 } from "@/lib/grading/createGradingSubmission";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const CARD_IMAGE_BUCKET = "card-images";
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -405,6 +406,8 @@ export default function CreateGradingSubmissionModal({
       return;
     }
 
+    const workspace = await loadActiveWorkspace(supabase);
+
     const [collectionResult, cardResult, activeGradingResult] =
       await Promise.all([
         supabase
@@ -416,7 +419,7 @@ export default function CreateGradingSubmissionModal({
             currency,
             created_at
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: true }),
 
         supabase
@@ -438,14 +441,14 @@ export default function CreateGradingSubmissionModal({
             state,
             created_at
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: false })
           .limit(1000),
 
         supabase
           .from("grading_submission_cards")
           .select("card_id")
-          .eq("user_id", user.id)
+          .eq("user_id", workspace.dataOwnerUserId)
           .in("status", [...ACTIVE_GRADING_STATUSES]),
       ]);
 
@@ -532,7 +535,7 @@ export default function CreateGradingSubmissionModal({
           card_id,
           storage_path
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", workspace.dataOwnerUserId)
         .eq("image_type", "front")
         .in("card_id", eligibleCardIds),
 
@@ -543,7 +546,7 @@ export default function CreateGradingSubmissionModal({
           attribute_key,
           attribute_value
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", workspace.dataOwnerUserId)
         .in("card_id", eligibleCardIds)
         .in("attribute_key", [...ATTRIBUTE_KEYS]),
     ]);

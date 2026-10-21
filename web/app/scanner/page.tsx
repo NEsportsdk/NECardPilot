@@ -25,6 +25,7 @@ import {
   type RapidIntakeSettings,
 } from "@/lib/scan/rapidIntake";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 type CollectionType = "pc" | "inventory";
 
@@ -388,6 +389,8 @@ export default function ScannerPage() {
         );
       }
 
+      const workspace = await loadActiveWorkspace(supabase);
+
       const [collectionResult, eventResult] = await Promise.all([
         supabase
           .from("collections")
@@ -398,7 +401,7 @@ export default function ScannerPage() {
             currency,
             created_at
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: true }),
         supabase
           .from("cardshow_events")
@@ -409,7 +412,7 @@ export default function ScannerPage() {
             currency,
             starts_at
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .in("status", ["planning", "active"])
           .order("starts_at", {
             ascending: true,

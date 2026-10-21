@@ -14,6 +14,7 @@ import AddCardModal from "@/components/AddCardModal";
 import AppSidebar from "@/components/app/AppSidebar";
 import AppStatePanel from "@/components/system/AppStatePanel";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const CARD_IMAGE_BUCKET = "card-images";
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -462,6 +463,8 @@ export default function GlobalCardsPage() {
       return;
     }
 
+    const workspace = await loadActiveWorkspace(supabase);
+
     const [collectionResult, cardResult] = await Promise.all([
       supabase
         .from("collections")
@@ -472,7 +475,7 @@ export default function GlobalCardsPage() {
           currency,
           created_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: true }),
 
       supabase
@@ -498,7 +501,7 @@ export default function GlobalCardsPage() {
           state,
           created_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false })
         .limit(1000),
     ]);
@@ -547,7 +550,7 @@ export default function GlobalCardsPage() {
             card_id,
             storage_path
           `)
-          .eq("user_id", user.id)
+          .eq("user_id", workspace.dataOwnerUserId)
           .eq("image_type", "front")
           .in("card_id", cardIds),
 
@@ -558,7 +561,7 @@ export default function GlobalCardsPage() {
             attribute_key,
             attribute_value
           `)
-          .eq("user_id", user.id)
+          .eq("user_id", workspace.dataOwnerUserId)
           .in("card_id", cardIds)
           .in("attribute_key", [...ATTRIBUTE_KEYS]),
 
@@ -575,7 +578,7 @@ export default function GlobalCardsPage() {
             realized_profit,
             platform
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .eq("transaction_type", "sale")
           .eq("status", "completed")
           .in("card_id", cardIds)

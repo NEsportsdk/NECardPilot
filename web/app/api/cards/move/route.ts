@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  requireWorkspaceCapability,
+  resolveActiveWorkspace,
+} from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -102,7 +106,8 @@ export async function POST(
       );
     }
 
-    const userId = user.id;
+    const workspace = await resolveActiveWorkspace(supabase);
+    requireWorkspaceCapability(workspace, "inventory");
 
     const {
       data: cardData,
@@ -116,7 +121,7 @@ export async function POST(
         player_name
       `)
       .eq("id", cardId)
-      .eq("user_id", userId)
+      .eq("workspace_id", workspace.id)
       .maybeSingle();
 
     if (
@@ -157,7 +162,7 @@ export async function POST(
         type,
         currency
       `)
-      .eq("user_id", userId)
+      .eq("workspace_id", workspace.id)
       .in("id", [
         sourceCollectionId,
         targetCollectionId,
@@ -230,7 +235,7 @@ export async function POST(
           targetCollectionId,
       })
       .eq("id", cardId)
-      .eq("user_id", userId)
+      .eq("workspace_id", workspace.id)
       .eq(
         "current_collection_id",
         sourceCollectionId

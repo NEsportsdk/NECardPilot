@@ -6,6 +6,7 @@ import AuthenticatedUserCard, {
   type UserIdentity,
 } from "@/components/auth/AuthenticatedUserCard";
 import VallectiveMark from "@/components/brand/VallectiveMark";
+import WorkspaceSwitcher from "@/components/app/WorkspaceSwitcher";
 import { getBetaFeedbackHref } from "@/lib/feedback/betaFeedback";
 import { useResolvedPathname } from "@/lib/navigation/useResolvedPathname";
 
@@ -121,6 +122,8 @@ export default function AppSidebar({
             <p className="brand-subtitle">Collector Intelligence</p>
           </div>
         </Link>
+
+        <WorkspaceSwitcher />
 
         <nav className="navigation" aria-label="Primary navigation">
           <p className="navigation-label">Workspace</p>

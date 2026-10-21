@@ -14,6 +14,7 @@ import {
   type PurchaseLotAllocationMethod,
 } from "@/lib/cardshow/createPurchaseLot";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const MAX_BATCH_SIZE = 5000;
 const DISPLAY_LIMIT = 250;
@@ -286,12 +287,14 @@ export default function CreatePurchaseLotModal({
       return;
     }
 
+    const workspace = await loadActiveWorkspace(supabase);
+
     const [collectionResult, cardResult, lotCardResult, eventResult] =
       await Promise.all([
         supabase
           .from("collections")
           .select("id, name, currency")
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: true }),
         supabase
           .from("cards")
@@ -312,18 +315,18 @@ export default function CreatePurchaseLotModal({
             state,
             created_at
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: false })
           .limit(MAX_BATCH_SIZE),
         supabase
           .from("purchase_lot_cards")
           .select("card_id")
-          .eq("user_id", user.id)
+          .eq("user_id", workspace.dataOwnerUserId)
           .limit(MAX_BATCH_SIZE),
         supabase
           .from("cardshow_events")
           .select("id, currency")
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .in("status", ["planning", "active"]),
       ]);
 
@@ -356,7 +359,7 @@ export default function CreatePurchaseLotModal({
       const askingResult = await supabase
         .from("cardshow_inventory_items")
         .select("event_id, card_id, asking_price, updated_at")
-        .eq("user_id", user.id)
+        .eq("user_id", workspace.dataOwnerUserId)
         .in(
           "event_id",
           openEvents.map((event) => event.id)
