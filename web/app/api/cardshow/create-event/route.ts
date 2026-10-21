@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -320,25 +321,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await supabase.rpc("create_cardshow_event", {
-      p_name: name,
-      p_venue: venue,
-      p_city: city,
-      p_address: address,
-      p_starts_at: startsAt,
-      p_ends_at: endsAt,
-      p_currency: currency,
-      p_payment_methods: paymentMethods,
-      p_booth_fee: boothFee,
-      p_travel_cost: travelCost,
-      p_accommodation_cost: accommodationCost,
-      p_food_cost: foodCost,
-      p_other_event_costs: otherEventCosts,
-      p_notes: notes,
-    });
+    const workspace = await resolveActiveWorkspace(supabase);
+
+    const { data, error } = await supabase.rpc(
+      "create_workspace_cardshow_event",
+      {
+        p_workspace_id: workspace.id,
+        p_name: name,
+        p_venue: venue,
+        p_city: city,
+        p_address: address,
+        p_starts_at: startsAt,
+        p_ends_at: endsAt,
+        p_currency: currency,
+        p_payment_methods: paymentMethods,
+        p_booth_fee: boothFee,
+        p_travel_cost: travelCost,
+        p_accommodation_cost: accommodationCost,
+        p_food_cost: foodCost,
+        p_other_event_costs: otherEventCosts,
+        p_notes: notes,
+      }
+    );
 
     if (error) {
-      console.error("create_cardshow_event failed:", error);
+      console.error("create_workspace_cardshow_event failed:", error);
       throw new RequestError(
         error.message || "Cardshowet kunne ikke oprettes.",
         getRpcErrorStatus(error)

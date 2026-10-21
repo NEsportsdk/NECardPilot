@@ -5,10 +5,12 @@ import {
   type TradeCard,
   type TradeCardAssignment,
   type TradeMember,
+  type TradePurchaseLot,
   type TradeTransaction,
 } from "@/lib/trade/tradeDesk";
 
 const member: TradeMember = {
+  workspace_id: "workspace-1",
   owner_user_id: "owner-1",
   member_user_id: "noah-1",
   role: "junior_trade_manager",
@@ -116,6 +118,16 @@ const transactions: TradeTransaction[] = [
   },
 ];
 
+const purchaseLots: TradePurchaseLot[] = [
+  {
+    created_by_user_id: "noah-1",
+    status: "locked",
+    purchased_at: "2026-10-03T10:00:00.000Z",
+    currency: "DKK",
+    total_cost: 230,
+  },
+];
+
 describe("trade desk metrics", () => {
   it("tracks the first 50-card mission and current inventory value", () => {
     const metrics = calculateTradeDeskMetrics({
@@ -123,6 +135,7 @@ describe("trade desk metrics", () => {
       cards,
       member,
       now: new Date("2026-10-20T12:00:00.000Z"),
+      purchaseLots,
       transactions,
     });
 
@@ -141,6 +154,7 @@ describe("trade desk metrics", () => {
       cards,
       member,
       now: new Date("2026-10-20T12:00:00.000Z"),
+      purchaseLots,
       transactions,
     });
 
@@ -168,7 +182,7 @@ describe("trade desk metrics", () => {
       },
       {
         ...transactions[0],
-        occurred_at: "2026-09-30T23:59:59.000Z",
+        occurred_at: "2026-09-30T21:59:59.000Z",
       },
     ];
     const metrics = calculateTradeDeskMetrics({
@@ -176,6 +190,12 @@ describe("trade desk metrics", () => {
       cards,
       member,
       now: new Date("2026-10-20T12:00:00.000Z"),
+      purchaseLots: [
+        { ...purchaseLots[0], created_by_user_id: "someone-else" },
+        { ...purchaseLots[0], status: "cancelled" },
+        { ...purchaseLots[0], currency: "EUR" },
+        { ...purchaseLots[0], purchased_at: "2026-09-30T21:59:59.000Z" },
+      ],
       transactions: ignoredTransactions,
     });
 
@@ -200,6 +220,25 @@ describe("trade desk metrics", () => {
 
     expect(metrics.sourcedProfitCommission).toBe(0);
     expect(metrics.totalCommission).toBe(0);
+  });
+
+  it("uses Copenhagen month boundaries for the enforced purchase budget", () => {
+    const metrics = calculateTradeDeskMetrics({
+      assignments,
+      cards,
+      member,
+      now: new Date("2026-11-01T00:15:00.000Z"),
+      purchaseLots: [
+        {
+          ...purchaseLots[0],
+          purchased_at: "2026-10-31T23:30:00.000Z",
+        },
+      ],
+      transactions: [],
+    });
+
+    expect(metrics.monthlyPurchaseBudgetUsed).toBe(230);
+    expect(metrics.monthlyPurchaseBudgetRemaining).toBe(2770);
   });
 
   it("treats 50 cards as a milestone and never as an inventory limit", () => {

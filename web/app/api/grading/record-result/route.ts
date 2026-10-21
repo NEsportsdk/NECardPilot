@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -371,9 +372,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const workspace = await resolveActiveWorkspace(supabase);
+
     const { data, error } = await supabase.rpc(
-      "record_grading_card_result",
+      "record_workspace_grading_card_result",
       {
+        p_workspace_id: workspace.id,
         p_submission_card_id: submissionCardId,
         p_result_grade: resultGrade,
         p_certification_number: certificationNumber,
@@ -386,7 +390,7 @@ export async function POST(request: Request) {
     );
 
     if (error) {
-      console.error("record_grading_card_result failed:", error);
+      console.error("record_workspace_grading_card_result failed:", error);
 
       throw new RequestError(
         error.message || "The grading result could not be recorded.",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -237,9 +238,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const workspace = await resolveActiveWorkspace(supabase);
+
     const { data, error } = await supabase.rpc(
-      "transition_grading_submission",
+      "transition_workspace_grading_submission",
       {
+        p_workspace_id: workspace.id,
         p_submission_id: submissionId,
         p_target_status: targetStatus,
         p_occurred_at: occurredAt,
@@ -251,7 +255,7 @@ export async function POST(request: Request) {
     );
 
     if (error) {
-      console.error("transition_grading_submission failed:", error);
+      console.error("transition_workspace_grading_submission failed:", error);
 
       throw new RequestError(
         error.message || "The grading submission could not be updated.",
