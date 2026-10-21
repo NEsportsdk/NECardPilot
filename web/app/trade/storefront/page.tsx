@@ -2,12 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import AppSidebar from "@/components/app/AppSidebar";
+import { isShopifyAdminConfigured } from "@/lib/shopify/admin";
+import { buildCardDna } from "@/lib/storefront/cardDna";
 import {
   type StorefrontCard,
   loadStorefrontListingDesk,
 } from "@/lib/storefront/listings.server";
 
-import { saveStorefrontListingAction } from "./actions";
+import {
+  publishStorefrontListingAction,
+  saveStorefrontListingAction,
+} from "./actions";
 import styles from "./storefront.module.css";
 
 export const metadata: Metadata = {
@@ -16,16 +21,7 @@ export const metadata: Metadata = {
 };
 
 function cardTitle(card: StorefrontCard) {
-  return [
-    card.year,
-    card.manufacturer,
-    card.set_name,
-    card.player_name,
-    card.parallel_name,
-    card.card_number ? `#${card.card_number}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  return buildCardDna(card, card.attributes).title;
 }
 
 function suggestedPrice(card: StorefrontCard) {
@@ -48,10 +44,11 @@ const statusLabels = {
 export default async function StorefrontPipelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string }>;
+  searchParams: Promise<{ error?: string; published?: string; saved?: string }>;
 }) {
-  const { error, saved } = await searchParams;
+  const { error, published, saved } = await searchParams;
   const desk = await loadStorefrontListingDesk();
+  const shopifyAdminConfigured = isShopifyAdminConfigured();
   const listingsByCard = new Map(
     desk.listings.map((listing) => [listing.card_id, listing])
   );
@@ -84,6 +81,11 @@ export default async function StorefrontPipelinePage({
         {saved ? (
           <p className={styles.successNotice} role="status">
             Kortet er gemt sikkert og står nu klar i Shopify-køen.
+          </p>
+        ) : null}
+        {published ? (
+          <p className={styles.successNotice} role="status">
+            Kortet er oprettet med lager 1 og er nu live i Vallective-webshoppen.
           </p>
         ) : null}
         {error ? (
@@ -119,11 +121,11 @@ export default async function StorefrontPipelinePage({
           </div>
           <div>
             <span>2</span>
-            <p><strong>Synkronisér</strong> til Shopify i næste integrationstrin.</p>
+            <p><strong>Kontrollér</strong> Card DNA, stand og den endelige pris.</p>
           </div>
           <div>
             <span>3</span>
-            <p><strong>Udgiv</strong> først når produkt og lager er kontrolleret.</p>
+            <p><strong>Udgiv</strong> produkt, billeder og lager 1 med ét klik.</p>
           </div>
         </section>
 
@@ -139,6 +141,7 @@ export default async function StorefrontPipelinePage({
           {desk.cards.length > 0 ? (
             desk.cards.map((card) => {
               const listing = listingsByCard.get(card.id);
+              const dna = buildCardDna(card, card.attributes);
               const title = listing?.title ?? cardTitle(card);
               const price = listing
                 ? Number(listing.price_amount).toFixed(2).replace(".", ",")
@@ -161,6 +164,16 @@ export default async function StorefrontPipelinePage({
                       <small data-status={listing.status}>
                         {statusLabels[listing.status]}
                       </small>
+                    ) : null}
+                    {dna.featureLabels.length ? (
+                      <div className={styles.dnaBadges} aria-label="Card DNA">
+                        {dna.featureLabels.map((feature) => (
+                          <span key={feature}>{feature}</span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {listing?.sync_error ? (
+                      <p className={styles.syncError}>{listing.sync_error}</p>
                     ) : null}
                   </div>
 
@@ -200,16 +213,31 @@ export default async function StorefrontPipelinePage({
                     <label className={styles.descriptionField}>
                       <span>Beskrivelse</span>
                       <textarea
-                        defaultValue={listing?.description ?? ""}
+                        defaultValue={listing?.description ?? dna.description}
                         maxLength={5000}
                         name="description"
                         placeholder="Det særlige ved kortet, stand og relevante detaljer…"
                         rows={3}
                       />
                     </label>
-                    <button type="submit">
+                    <button className={styles.queueButton} type="submit">
                       {listing ? "Opdatér Shopify-kø" : "Klar til Shopify"}
                     </button>
+                    <button
+                      className={styles.publishButton}
+                      disabled={!shopifyAdminConfigured}
+                      formAction={publishStorefrontListingAction}
+                      type="submit"
+                    >
+                      {listing?.status === "published"
+                        ? "Opdatér live produkt"
+                        : "Udgiv i webshop"}
+                    </button>
+                    {!shopifyAdminConfigured ? (
+                      <small className={styles.configurationNote}>
+                        Shopify Admin-forbindelsen mangler i dette miljø.
+                      </small>
+                    ) : null}
                   </form>
                 </article>
               );

@@ -267,6 +267,36 @@
   font-weight: 750;
 }
 
+.dnaBadges {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dnaBadges span {
+  padding: 5px 7px;
+  border: 1px solid rgba(167, 139, 250, 0.15);
+  border-radius: 999px;
+  background: rgba(124, 92, 255, 0.06);
+  color: #bdb4ff;
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.syncError {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(248, 113, 113, 0.15);
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.05);
+  color: #fca5a5 !important;
+  overflow-wrap: anywhere;
+}
+
 .listingForm {
   display: grid;
   grid-template-columns: minmax(120px, 0.65fr) minmax(100px, 0.45fr) 100px;
@@ -328,16 +358,36 @@
 }
 
 .listingForm button {
-  grid-column: 1 / -1;
   min-height: 41px;
-  border: 1px solid rgba(110, 231, 183, 0.2);
   border-radius: 11px;
-  background: rgba(16, 185, 129, 0.08);
-  color: #b3f2d8;
   cursor: pointer;
   font: inherit;
   font-size: 9px;
   font-weight: 800;
+}
+
+.queueButton {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.025);
+  color: #c7ccd7;
+}
+
+.publishButton {
+  grid-column: 2 / -1;
+  border: 1px solid rgba(110, 231, 183, 0.24);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(124, 92, 255, 0.1));
+  color: #b3f2d8;
+}
+
+.listingForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.configurationNote {
+  grid-column: 1 / -1;
+  color: #6f788b;
+  font-size: 8px;
 }
 
 .emptyState {
@@ -414,7 +464,8 @@
 
   .titleField,
   .descriptionField,
-  .listingForm button {
+  .listingForm button,
+  .publishButton {
     grid-column: 1 / -1;
   }
 }
