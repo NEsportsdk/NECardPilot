@@ -55,4 +55,11 @@ describe("mobile navigation", () => {
     expect(shouldShowMobileNavigation("/signup")).toBe(false);
     expect(shouldShowMobileNavigation("/")).toBe(true);
   });
+
+  it("stays hidden throughout the public storefront", () => {
+    expect(shouldShowMobileNavigation("/home")).toBe(false);
+    expect(shouldShowMobileNavigation("/shop")).toBe(false);
+    expect(shouldShowMobileNavigation("/shop/products/card-1")).toBe(false);
+    expect(shouldShowMobileNavigation("/shop/cart")).toBe(false);
+  });
 });

@@ -155,6 +155,13 @@ describe("auth route classification", () => {
     expect(isPublicRoute("/cards")).toBe(false);
   });
 
+  it("keeps the public home and Shopify storefront open", () => {
+    expect(isPublicRoute("/home")).toBe(true);
+    expect(isPublicRoute("/shop")).toBe(true);
+    expect(isPublicRoute("/shop/products/card-1")).toBe(true);
+    expect(isPublicRoute("/trade/storefront")).toBe(false);
+  });
+
   it("redirects authenticated users away from entry pages", () => {
     expect(isGuestOnlyRoute("/login")).toBe(true);
     expect(isGuestOnlyRoute("/auth/confirm")).toBe(false);

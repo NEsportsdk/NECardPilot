@@ -524,6 +524,58 @@
   border-color: rgba(167, 139, 250, 0.16);
 }
 
+.storefrontPanel {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  border-color: rgba(110, 231, 183, 0.16);
+  background:
+    radial-gradient(circle at 90% 20%, rgba(52, 211, 153, 0.08), transparent 30%),
+    rgba(16, 19, 27, 0.98);
+}
+
+.storefrontPanel h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 21px;
+}
+
+.storefrontPanel > div > p:last-child {
+  max-width: 690px;
+  margin: 9px 0 0;
+  color: #7d8598;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.storefrontActions {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+
+.storefrontActions span {
+  color: #77c7a8;
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.storefrontActions a {
+  padding: 11px 14px;
+  border: 1px solid rgba(110, 231, 183, 0.2);
+  border-radius: 11px;
+  background: rgba(16, 185, 129, 0.07);
+  color: #b4f4da;
+  font-size: 10px;
+  font-weight: 760;
+  text-decoration: none;
+}
+
 .accessBadge {
   border-color: rgba(52, 211, 153, 0.2);
   background: rgba(16, 185, 129, 0.07);
@@ -716,6 +768,15 @@
 
   .workspaceGrid {
     grid-template-columns: 1fr;
+  }
+
+  .storefrontPanel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .storefrontActions {
+    justify-items: start;
   }
 
   .stageGrid > div {

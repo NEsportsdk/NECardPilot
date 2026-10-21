@@ -2,6 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "192.168.86.168"],
+  images: {
+    remotePatterns: [
+      {
+        hostname: "cdn.shopify.com",
+        protocol: "https",
+      },
+    ],
+  },
   async headers() {
     return [
       {
