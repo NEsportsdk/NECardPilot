@@ -2,6 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
+import type { CardAttribute } from "@/lib/storefront/cardDna";
 import { createClient } from "@/lib/supabase/server";
 import { parseWorkspaceList } from "@/lib/workspaces/workspace";
 
@@ -13,6 +14,8 @@ export type StorefrontListing = {
   id: string;
   price_amount: number | string;
   shopify_handle: string | null;
+  shopify_product_id: string | null;
+  shopify_variant_id: string | null;
   status: "error" | "paused" | "published" | "ready_for_shopify" | "sold" | "synced";
   sync_error: string | null;
   title: string;
@@ -20,6 +23,7 @@ export type StorefrontListing = {
 };
 
 export type StorefrontCard = {
+  attributes: CardAttribute[];
   card_number: string | null;
   estimated_value: number | string | null;
   id: string;
@@ -27,6 +31,7 @@ export type StorefrontCard = {
   market_estimated_value: number | string | null;
   parallel_name: string | null;
   player_name: string;
+  serial_number: string | null;
   set_name: string | null;
   state: string;
   updated_at: string;
@@ -72,7 +77,7 @@ export async function loadStorefrontListingDesk(): Promise<StorefrontListingDesk
     supabase
       .from("cards")
       .select(
-        "id,player_name,year,manufacturer,set_name,card_number,parallel_name,state,estimated_value,market_estimated_value,updated_at"
+        "id,player_name,year,manufacturer,set_name,card_number,parallel_name,serial_number,state,estimated_value,market_estimated_value,updated_at"
       )
       .eq("workspace_id", businessWorkspace.id)
       .not("state", "in", '("sold","archived")')
@@ -81,7 +86,7 @@ export async function loadStorefrontListingDesk(): Promise<StorefrontListingDesk
     supabase
       .from("storefront_listings")
       .select(
-        "id,card_id,status,title,description,condition_label,price_amount,currency,shopify_handle,sync_error,updated_at"
+        "id,card_id,status,title,description,condition_label,price_amount,currency,shopify_product_id,shopify_variant_id,shopify_handle,sync_error,updated_at"
       )
       .eq("workspace_id", businessWorkspace.id)
       .order("updated_at", { ascending: false }),
@@ -91,9 +96,35 @@ export async function loadStorefrontListingDesk(): Promise<StorefrontListingDesk
     throw cardsResult.error ?? listingsResult.error;
   }
 
+  const cards = (cardsResult.data ?? []) as Array<Omit<StorefrontCard, "attributes">>;
+  const cardIds = cards.map((card) => card.id);
+  const attributesResult = cardIds.length
+    ? await supabase
+        .from("card_attributes")
+        .select("card_id,attribute_key,attribute_value")
+        .in("card_id", cardIds)
+    : { data: [], error: null };
+
+  if (attributesResult.error) {
+    throw attributesResult.error;
+  }
+
+  const attributesByCard = new Map<string, CardAttribute[]>();
+  for (const attribute of attributesResult.data ?? []) {
+    const attributes = attributesByCard.get(attribute.card_id) ?? [];
+    attributes.push({
+      attribute_key: attribute.attribute_key,
+      attribute_value: attribute.attribute_value,
+    });
+    attributesByCard.set(attribute.card_id, attributes);
+  }
+
   return {
     canManageSales: businessWorkspace.canManageSales,
-    cards: (cardsResult.data ?? []) as StorefrontCard[],
+    cards: cards.map((card) => ({
+      ...card,
+      attributes: attributesByCard.get(card.id) ?? [],
+    })),
     listings: (listingsResult.data ?? []) as StorefrontListing[],
     workspaceId: businessWorkspace.id,
     workspaceName: businessWorkspace.name,
