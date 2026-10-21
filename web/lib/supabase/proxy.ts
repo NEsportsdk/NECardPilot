@@ -56,6 +56,15 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = Boolean(data?.claims?.sub) && !error;
   const pathname = request.nextUrl.pathname;
 
+  if (!isAuthenticated && pathname === "/") {
+    const publicHomeUrl = request.nextUrl.clone();
+    publicHomeUrl.pathname = "/home";
+
+    const rewriteResponse = NextResponse.rewrite(publicHomeUrl);
+
+    return copyResponseCookies(response, rewriteResponse);
+  }
+
   if (!isAuthenticated && !isPublicRoute(pathname)) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";

@@ -362,6 +362,21 @@ export default async function TradeDeskPage({
               ) : null}
             </div>
           </section>
+
+          <section className={`${styles.panel} ${styles.storefrontPanel}`}>
+            <div>
+              <p className={styles.eyebrow}>Ny salgsvej</p>
+              <h2>Fra virksomhedslager til Vallective Shop</h2>
+              <p>
+                Klargør titel, stand og pris i en intern kø. Den offentlige butik
+                viser kun produkter, der efterfølgende er udgivet i Shopify.
+              </p>
+            </div>
+            <div className={styles.storefrontActions}>
+              <span>Shopify forbundet · DKK aktiv</span>
+              <Link href="/trade/storefront">Åbn storefront pipeline →</Link>
+            </div>
+          </section>
         </div>
 
         <footer className={styles.footer}>

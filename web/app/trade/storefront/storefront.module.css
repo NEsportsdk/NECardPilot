@@ -1,0 +1,420 @@
+.shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 84% 0%, rgba(124, 92, 255, 0.14), transparent 30%),
+    #080a10;
+  color: #f8fafc;
+}
+
+.main {
+  min-height: 100vh;
+  margin-left: 310px;
+  padding: 48px clamp(28px, 4vw, 66px) 80px;
+}
+
+.header,
+.summaryGrid,
+.guide,
+.cardList,
+.successNotice,
+.errorNotice {
+  max-width: 1240px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.eyebrow {
+  margin: 0 0 9px;
+  color: #9f93ff;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(42px, 5vw, 66px);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.header > div:first-child > p:last-child {
+  max-width: 720px;
+  margin: 15px 0 0;
+  color: #7d8598;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.headerActions {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.headerActions a {
+  color: #b8b1ef;
+  font-size: 11px;
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.successNotice,
+.errorNotice {
+  margin-top: 24px;
+  margin-bottom: 0;
+  padding: 13px 16px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.successNotice {
+  border: 1px solid rgba(52, 211, 153, 0.18);
+  background: rgba(16, 185, 129, 0.07);
+  color: #a7f3d0;
+}
+
+.errorNotice {
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  background: rgba(239, 68, 68, 0.07);
+  color: #fecaca;
+}
+
+.summaryGrid {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryGrid article {
+  min-height: 125px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 17px;
+  background: rgba(16, 19, 27, 0.95);
+}
+
+.summaryGrid span,
+.summaryGrid small {
+  color: #6f788b;
+  font-size: 9px;
+}
+
+.summaryGrid span {
+  font-weight: 780;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summaryGrid strong {
+  margin-top: auto;
+  color: #fff;
+  font-size: 28px;
+}
+
+.currencyCard {
+  border-color: rgba(52, 211, 153, 0.16) !important;
+}
+
+.currencyCard strong {
+  color: #88e7bd;
+}
+
+.guide {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.guide > div {
+  padding: 19px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.guide > div + div {
+  border-left: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.guide span {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(124, 92, 255, 0.1);
+  color: #bdb4ff;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.guide p {
+  margin: 0;
+  color: #737c8e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.guide strong {
+  color: #d9dde6;
+}
+
+.cardList {
+  margin-top: 32px;
+}
+
+.listHeading {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.listHeading h2 {
+  margin: 0;
+  font-size: 23px;
+  letter-spacing: -0.035em;
+}
+
+.listHeading > p {
+  margin: 0;
+  color: #626b7e;
+  font-size: 9px;
+}
+
+.cardRow {
+  margin-top: 12px;
+  padding: 22px;
+  display: grid;
+  grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.75fr);
+  gap: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 20px;
+  background: rgba(16, 19, 27, 0.95);
+}
+
+.cardIdentity {
+  position: relative;
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  align-content: start;
+  gap: 14px;
+}
+
+.cardMark {
+  width: 56px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(167, 139, 250, 0.17);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(124, 92, 255, 0.15), rgba(255, 255, 255, 0.02));
+  color: #8778e9;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.cardIdentity span {
+  color: #625a99;
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cardIdentity h3 {
+  margin: 5px 0 0;
+  color: #eff1f6;
+  font-size: 15px;
+}
+
+.cardIdentity p {
+  margin: 7px 0 0;
+  color: #6e7789;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.cardIdentity small {
+  grid-column: 1 / -1;
+  width: fit-content;
+  padding: 6px 8px;
+  border: 1px solid rgba(110, 231, 183, 0.16);
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.06);
+  color: #96e7c1;
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.listingForm {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.65fr) minmax(100px, 0.45fr) 100px;
+  gap: 12px;
+}
+
+.listingForm label {
+  display: grid;
+  gap: 7px;
+}
+
+.listingForm label > span {
+  color: #697285;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.titleField,
+.descriptionField {
+  grid-column: 1 / -1;
+}
+
+.listingForm input,
+.listingForm select,
+.listingForm textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.025);
+  color: #edf0f5;
+  font: inherit;
+  font-size: 10px;
+}
+
+.listingForm input,
+.listingForm select {
+  min-height: 39px;
+  padding: 0 11px;
+}
+
+.listingForm textarea {
+  min-height: 72px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.listingForm input:focus,
+.listingForm select:focus,
+.listingForm textarea:focus {
+  border-color: rgba(167, 139, 250, 0.48);
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.09);
+}
+
+.listingForm select option {
+  background: #11141c;
+}
+
+.listingForm button {
+  grid-column: 1 / -1;
+  min-height: 41px;
+  border: 1px solid rgba(110, 231, 183, 0.2);
+  border-radius: 11px;
+  background: rgba(16, 185, 129, 0.08);
+  color: #b3f2d8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.emptyState {
+  padding: 60px 25px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 20px;
+  background: rgba(16, 19, 27, 0.95);
+  text-align: center;
+}
+
+.emptyState h3,
+.emptyState p {
+  margin: 0;
+}
+
+.emptyState p {
+  margin-top: 9px;
+  color: #737c8e;
+  font-size: 11px;
+}
+
+.emptyState a {
+  margin-top: 18px;
+  display: inline-block;
+  color: #b8b1ef;
+  font-size: 10px;
+}
+
+@media (max-width: 1100px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cardRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .main {
+    margin-left: 0;
+    padding: 35px 24px 110px;
+  }
+}
+
+@media (max-width: 700px) {
+  .main {
+    padding: 28px 14px 112px;
+  }
+
+  .header,
+  .listHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerActions {
+    justify-items: start;
+  }
+
+  .summaryGrid,
+  .guide {
+    grid-template-columns: 1fr;
+  }
+
+  .guide > div + div {
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    border-left: 0;
+  }
+
+  .listingForm {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .titleField,
+  .descriptionField,
+  .listingForm button {
+    grid-column: 1 / -1;
+  }
+}

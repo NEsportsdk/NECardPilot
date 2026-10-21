@@ -238,7 +238,15 @@ const checks = [
     "expired auth-link recovery",
     () => expectHtml(baseUrl, "/auth/error", "We couldn&#x27;t use that link"),
   ],
-  ["protected Home redirect", () => expectProtectedRedirect(baseUrl, "/", "/")],
+  [
+    "public landing page",
+    () =>
+      expectHtml(
+        baseUrl,
+        "/",
+        "The intelligent home for card collectors"
+      ),
+  ],
   [
     "protected beta pilot redirect",
     () => expectProtectedRedirect(baseUrl, "/beta", "/beta"),

@@ -104,7 +104,9 @@ const mobileNavigationExcludedRoutes = [
   "/auth",
   "/change-password",
   "/forgot-password",
+  "/home",
   "/login",
+  "/shop",
   "/signup",
 ];
 
