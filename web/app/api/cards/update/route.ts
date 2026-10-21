@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  requireWorkspaceCapability,
+  resolveActiveWorkspace,
+} from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -543,7 +547,9 @@ export async function POST(
       );
     }
 
-    const userId = user.id;
+    const workspace = await resolveActiveWorkspace(supabase);
+    requireWorkspaceCapability(workspace, "inventory");
+    const userId = workspace.dataOwnerUserId;
 
     const {
       data: originalCardData,
@@ -566,7 +572,7 @@ export async function POST(
         state
       `)
       .eq("id", cardId)
-      .eq("user_id", userId)
+      .eq("workspace_id", workspace.id)
       .maybeSingle();
 
     if (

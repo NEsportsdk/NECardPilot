@@ -9,6 +9,10 @@ import {
   type MarketSubjectCondition,
 } from "@/lib/market/resolveMarketPrice";
 import { createClient } from "@/lib/supabase/server";
+import {
+  requireWorkspaceCapability,
+  resolveActiveWorkspace,
+} from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -632,7 +636,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const userId = user.id;
+    const workspace = await resolveActiveWorkspace(supabase);
+    requireWorkspaceCapability(workspace, "inventory");
+    const userId = workspace.dataOwnerUserId;
 
     const { data: cardData, error: cardError } = await supabase
       .from("cards")
@@ -657,7 +663,7 @@ export async function POST(request: Request) {
         market_value_updated_at
       `)
       .eq("id", cardId)
-      .eq("user_id", userId)
+      .eq("workspace_id", workspace.id)
       .maybeSingle();
 
     if (cardError || !cardData) {
@@ -698,7 +704,7 @@ export async function POST(request: Request) {
         .from("collections")
         .select("id, user_id, currency")
         .eq("id", card.current_collection_id)
-        .eq("user_id", userId)
+        .eq("workspace_id", workspace.id)
         .maybeSingle(),
 
       supabase

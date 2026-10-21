@@ -16,6 +16,7 @@ import {
   upsertCardshowInventory,
 } from "@/lib/cardshow/upsertCardshowInventory";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const CARD_IMAGE_BUCKET = "card-images";
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -476,6 +477,8 @@ export default function CardshowInventoryManager({
       return;
     }
 
+    const workspace = await loadActiveWorkspace(supabase);
+
     const [collectionResult, cardResult, inventoryResult] = await Promise.all([
       supabase
         .from("collections")
@@ -485,7 +488,7 @@ export default function CardshowInventoryManager({
           type,
           currency
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: true }),
 
       supabase
@@ -508,7 +511,7 @@ export default function CardshowInventoryManager({
           state,
           created_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false })
         .limit(MAX_BATCH_SIZE),
 
@@ -532,7 +535,7 @@ export default function CardshowInventoryManager({
           reserved_until,
           notes
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", workspace.dataOwnerUserId)
         .eq("event_id", eventId),
     ]);
 
@@ -580,7 +583,7 @@ export default function CardshowInventoryManager({
           card_id,
           storage_path
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", workspace.dataOwnerUserId)
         .eq("image_type", "front")
         .limit(10000),
 
@@ -591,7 +594,7 @@ export default function CardshowInventoryManager({
           attribute_key,
           attribute_value
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", workspace.dataOwnerUserId)
         .in("attribute_key", [...ATTRIBUTE_KEYS])
         .limit(20000),
     ]);

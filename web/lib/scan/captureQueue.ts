@@ -7,6 +7,7 @@ import type {
   UploadCardImagesResult,
 } from "@/lib/scan/uploadCardImages";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const CARD_IMAGE_BUCKET = "card-images";
 const SIGNED_PREVIEW_SECONDS = 60 * 20;
@@ -222,9 +223,11 @@ export function canIdentifyCaptureItem(item: CaptureQueueItem) {
 
 export async function listCaptureQueueItems(collectionId?: string) {
   const supabase = createClient();
+  const workspace = await loadActiveWorkspace(supabase);
   let query = supabase
     .from("scan_capture_items")
     .select("*")
+    .eq("workspace_id", workspace.id)
     .order("created_at", { ascending: true });
 
   if (collectionId?.trim()) {
@@ -244,10 +247,12 @@ export async function listCaptureQueueItems(collectionId?: string) {
 
 export async function getCaptureQueueItem(itemId: string) {
   const supabase = createClient();
+  const workspace = await loadActiveWorkspace(supabase);
   const { data, error } = await supabase
     .from("scan_capture_items")
     .select("*")
     .eq("id", itemId)
+    .eq("workspace_id", workspace.id)
     .maybeSingle();
 
   if (error) {
@@ -282,9 +287,12 @@ export async function createUploadedCaptureItem({
     throw new Error("Du skal være logget ind for at gemme capture-køen.");
   }
 
+  const workspace = await loadActiveWorkspace(supabase);
+
   const payload = {
     id: itemId,
-    user_id: user.id,
+    user_id: workspace.dataOwnerUserId,
+    workspace_id: workspace.id,
     collection_id: collectionId,
     capture_session_id: captureSessionId,
     status: "uploaded" as const,

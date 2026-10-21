@@ -28,6 +28,7 @@ import type {
   TransitionGradingSubmissionResult,
 } from "@/lib/grading/transitionGradingSubmission";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const CARD_IMAGE_BUCKET = "card-images";
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -509,6 +510,8 @@ export default function GradingCenterPage() {
       return;
     }
 
+    const workspace = await loadActiveWorkspace(supabase);
+
     const [submissionResult, collectionResult] = await Promise.all([
       supabase
         .from("grading_submissions")
@@ -541,7 +544,7 @@ export default function GradingCenterPage() {
           created_at,
           updated_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false }),
 
       supabase
@@ -552,7 +555,7 @@ export default function GradingCenterPage() {
           type,
           currency
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: true }),
     ]);
 
@@ -608,7 +611,7 @@ export default function GradingCenterPage() {
         returned_at,
         created_at
       `)
-      .eq("user_id", user.id)
+      .eq("user_id", workspace.dataOwnerUserId)
       .in("submission_id", submissionIds)
       .order("position", { ascending: true });
 
@@ -653,7 +656,7 @@ export default function GradingCenterPage() {
             serial_number,
             state
           `)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .in("id", cardIds),
 
         supabase
@@ -662,7 +665,7 @@ export default function GradingCenterPage() {
             card_id,
             storage_path
           `)
-          .eq("user_id", user.id)
+          .eq("user_id", workspace.dataOwnerUserId)
           .eq("image_type", "front")
           .in("card_id", cardIds),
 
@@ -673,7 +676,7 @@ export default function GradingCenterPage() {
             attribute_key,
             attribute_value
           `)
-          .eq("user_id", user.id)
+          .eq("user_id", workspace.dataOwnerUserId)
           .in("card_id", cardIds)
           .in("attribute_key", [...ATTRIBUTE_KEYS]),
       ]);

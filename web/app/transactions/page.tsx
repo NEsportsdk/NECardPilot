@@ -12,6 +12,7 @@ import {
 import AppSidebar from "@/components/app/AppSidebar";
 import AppStatePanel from "@/components/system/AppStatePanel";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const CARD_IMAGE_BUCKET = "card-images";
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -344,6 +345,8 @@ export default function TransactionsPage() {
       return;
     }
 
+    const workspace = await loadActiveWorkspace(supabase);
+
     const [transactionResult, collectionResult] = await Promise.all([
       supabase
         .from("card_transactions")
@@ -371,7 +374,7 @@ export default function TransactionsPage() {
           card_state_before,
           created_at
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("occurred_at", { ascending: false }),
 
       supabase
@@ -382,7 +385,7 @@ export default function TransactionsPage() {
           type,
           currency
         `)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: true }),
     ]);
 

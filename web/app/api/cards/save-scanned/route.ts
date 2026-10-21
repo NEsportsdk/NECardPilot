@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import type { DuplicateCardIdentity } from "@/lib/cards/duplicateCards";
 import { findDuplicateCards } from "@/lib/cards/findDuplicateCards";
 import { createClient } from "@/lib/supabase/server";
+import {
+  requireWorkspaceCapability,
+  resolveActiveWorkspace,
+} from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -453,16 +457,18 @@ export async function POST(
      * ikke kan være null inde i funktionerne
      * længere nede i filen.
      */
-    const userId = user.id;
+    const workspace = await resolveActiveWorkspace(supabase);
+    requireWorkspaceCapability(workspace, "inventory");
+    const userId = workspace.dataOwnerUserId;
 
     const {
       data: collection,
       error: collectionError,
     } = await supabase
       .from("collections")
-      .select("id")
+      .select("id, workspace_id")
       .eq("id", collectionId)
-      .eq("user_id", userId)
+      .eq("workspace_id", workspace.id)
       .maybeSingle();
 
     if (
@@ -508,7 +514,8 @@ export async function POST(
       await findDuplicateCards(
         supabase,
         userId,
-        duplicateIdentity
+        duplicateIdentity,
+        workspace.id
       );
 
     if (
@@ -569,6 +576,7 @@ export async function POST(
       .from("cards")
       .insert({
         user_id: userId,
+        workspace_id: workspace.id,
 
         current_collection_id:
           collectionId,

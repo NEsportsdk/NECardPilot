@@ -19,6 +19,8 @@ const SIGNED_URL_SECONDS = 60 * 60;
 
 type Collection = {
   id: string;
+  user_id: string;
+  workspace_id: string;
   name: string;
   type: "pc" | "inventory";
   currency: string;
@@ -968,6 +970,12 @@ export default function CollectionPage() {
     setSaving(true);
     setMessage("");
 
+    if (!collection) {
+      setMessage("Samlingen kunne ikke indlæses.");
+      setSaving(false);
+      return;
+    }
+
     const {
       data: { user },
       error: userError,
@@ -984,7 +992,8 @@ export default function CollectionPage() {
     const { error } = await supabase
       .from("cards")
       .insert({
-        user_id: user.id,
+        user_id: collection.user_id,
+        workspace_id: collection.workspace_id,
         current_collection_id:
           collectionId,
         player_name:

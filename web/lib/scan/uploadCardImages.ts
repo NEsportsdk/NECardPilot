@@ -1,5 +1,6 @@
 import { createId } from "@/lib/createId";
 import { createClient } from "@/lib/supabase/client";
+import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
 const CARD_IMAGE_BUCKET = "card-images";
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
@@ -169,6 +170,12 @@ export async function uploadCardImages({
     throw new Error("Du skal være logget ind for at uploade kortbilleder.");
   }
 
+  const workspace = await loadActiveWorkspace(supabase);
+
+  if (!workspace.canManageInventory) {
+    throw new Error("Du har ikke adgang til at uploade kort i dette workspace.");
+  }
+
   const scanId = requestedScanId?.trim() || createId();
 
   if (!/^[a-zA-Z0-9-_]{8,128}$/.test(scanId)) {
@@ -178,14 +185,14 @@ export async function uploadCardImages({
   const safeCollectionId = collectionId.replace(/[^a-zA-Z0-9-_]/g, "");
 
   const frontPath = [
-    user.id,
+    workspace.dataOwnerUserId,
     safeCollectionId,
     scanId,
     `front.${getFileExtension(frontImage)}`,
   ].join("/");
 
   const backPath = [
-    user.id,
+    workspace.dataOwnerUserId,
     safeCollectionId,
     scanId,
     `back.${getFileExtension(backImage)}`,

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  requireWorkspaceCapability,
+  resolveActiveWorkspace,
+} from "@/lib/workspaces/workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -462,12 +466,18 @@ export async function POST(
       );
     }
 
+    const workspace = await resolveActiveWorkspace(supabase);
+    requireWorkspaceCapability(workspace, "sales");
+
     const {
       data,
       error,
     } = await supabase.rpc(
-      "record_card_sale",
+      "record_workspace_card_sale",
       {
+        p_workspace_id:
+          workspace.id,
+
         p_card_id:
           cardId,
 
@@ -508,7 +518,7 @@ export async function POST(
 
     if (error) {
       console.error(
-        "record_card_sale fejlede:",
+        "record_workspace_card_sale fejlede:",
         error
       );
 
