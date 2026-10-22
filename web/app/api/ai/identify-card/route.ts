@@ -1,6 +1,18 @@
+import { createHash } from "node:crypto";
+
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+import {
+  AiUsageGuardError,
+  completeAiUsage,
+  failAiUsage,
+  reserveAiUsage,
+} from "@/lib/billing/aiUsage.server";
+import {
+  toPublicAiUsageAllowance,
+  type AiUsageReservation,
+} from "@/lib/billing/aiUsage";
 import {
   calculateModelUsage,
   createIdentificationUsage,
@@ -8,6 +20,10 @@ import {
   type IdentificationUsage,
 } from "@/lib/scan/identificationUsage";
 import { createClient } from "@/lib/supabase/server";
+import {
+  requireWorkspaceCapability,
+  resolveActiveWorkspace,
+} from "@/lib/workspaces/workspace.server";
 import {
   resolveCardWithWeb,
   type CatalogCandidate,
@@ -1150,6 +1166,8 @@ function createCatalogCandidate(
 
 export async function POST(request: Request) {
   const requestStartedAt = Date.now();
+  let usageReservation: AiUsageReservation | null = null;
+  let usageSupabase: Awaited<ReturnType<typeof createClient>> | null = null;
 
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -1241,7 +1259,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const requiredUserPrefix = `${user.id}/`;
+    const workspace = await resolveActiveWorkspace(supabase);
+    requireWorkspaceCapability(workspace, "inventory");
+
+    const requiredUserPrefix = `${workspace.dataOwnerUserId}/`;
 
     if (
       !frontPath.startsWith(
@@ -1281,7 +1302,7 @@ export async function POST(request: Request) {
           "id, status, front_image_path, back_image_path, identification_result, identification_usage"
         )
         .eq("id", queueItemId)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .maybeSingle();
 
       if (queueItemError) {
@@ -1403,6 +1424,21 @@ export async function POST(request: Request) {
       );
     }
 
+    const idempotencyKey =
+      typeof queueItemId === "string"
+        ? `capture:${queueItemId}`
+        : `images:${createHash("sha256")
+            .update(`${frontPath}\n${backPath}`)
+            .digest("hex")}`;
+
+    usageReservation = await reserveAiUsage({
+      supabase,
+      feature: "card_identification",
+      workspaceId: workspace.id,
+      idempotencyKey,
+    });
+    usageSupabase = supabase;
+
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
@@ -1458,14 +1494,8 @@ export async function POST(request: Request) {
         evidenceResponse
       );
 
-      return NextResponse.json(
-        {
-          error:
-            "AI-modellen kunne ikke læse kortets synlige oplysninger.",
-        },
-        {
-          status: 502,
-        }
+      throw new Error(
+        "AI evidence-resultatet havde et ugyldigt format."
       );
     }
 
@@ -1536,14 +1566,8 @@ export async function POST(request: Request) {
         identificationResponse
       );
 
-      return NextResponse.json(
-        {
-          error:
-            "AI-modellen returnerede ikke et brugbart identifikationsresultat.",
-        },
-        {
-          status: 502,
-        }
+      throw new Error(
+        "AI-identifikationen havde et ugyldigt format."
       );
     }
 
@@ -1709,7 +1733,7 @@ export async function POST(request: Request) {
           identified_at: identifiedAt,
         })
         .eq("id", queueItemId)
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspace.id)
         .eq("status", "identifying")
         .select("id")
         .maybeSingle();
@@ -1719,7 +1743,7 @@ export async function POST(request: Request) {
           .from("scan_capture_items")
           .select("status, identification_result, identification_usage")
           .eq("id", queueItemId)
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspace.id)
           .maybeSingle();
 
         if (
@@ -1728,10 +1752,24 @@ export async function POST(request: Request) {
             existingItem.status === "needs_review" ||
             existingItem.status === "saved")
         ) {
+          const allowance = usageReservation.allowance;
+
+          try {
+            await completeAiUsage({
+              supabase,
+              reservationId: usageReservation.id,
+              estimatedCostUsd: usage.estimatedCostUsd ?? null,
+            });
+            usageReservation = null;
+          } catch (usageError) {
+            console.error("AI-forbruget kunne ikke afsluttes:", usageError);
+          }
+
           return NextResponse.json({
             success: true,
             card: existingItem.identification_result,
             usage: existingItem.identification_usage,
+            allowance: toPublicAiUsageAllowance(allowance),
             persisted: true,
             reused: true,
           });
@@ -1746,6 +1784,19 @@ export async function POST(request: Request) {
           "AI-resultatet blev oprettet, men kunne ikke gemmes sikkert i capture-køen."
         );
       }
+    }
+
+    const allowance = usageReservation.allowance;
+
+    try {
+      await completeAiUsage({
+        supabase,
+        reservationId: usageReservation.id,
+        estimatedCostUsd: usage.estimatedCostUsd ?? null,
+      });
+      usageReservation = null;
+    } catch (usageError) {
+      console.error("AI-forbruget kunne ikke afsluttes:", usageError);
     }
 
     return NextResponse.json({
@@ -1767,14 +1818,41 @@ export async function POST(request: Request) {
           requestStartedAt,
       },
       usage,
+      allowance: toPublicAiUsageAllowance(allowance),
       persisted: typeof queueItemId === "string",
       reused: false,
     });
   } catch (error) {
+    if (usageReservation && usageSupabase) {
+      try {
+        await failAiUsage({
+          supabase: usageSupabase,
+          reservationId: usageReservation.id,
+          failureCode:
+            error instanceof AiUsageGuardError ? error.code : "request_failed",
+        });
+      } catch (usageError) {
+        console.error("AI-reservationen kunne ikke frigives:", usageError);
+      }
+    }
+
     console.error(
       "Fejl i identify-card route:",
       error
     );
+
+    if (error instanceof AiUsageGuardError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          allowance: toPublicAiUsageAllowance(error.allowance),
+        },
+        {
+          status: error.status,
+        }
+      );
+    }
 
     const message =
       getErrorMessage(error);
