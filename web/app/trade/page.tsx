@@ -5,6 +5,7 @@ import AppSidebar from "@/components/app/AppSidebar";
 import { defaultTradeTerms } from "@/lib/trade/tradeDesk";
 import { loadTradeDesk } from "@/lib/trade/tradeDesk.server";
 
+import { sendPendingTradeTeamInvitationAction } from "./actions";
 import styles from "./trade.module.css";
 
 export const metadata: Metadata = {
@@ -92,7 +93,19 @@ export default async function TradeDeskPage({
               </p>
             </div>
             <div className={styles.inviteActions}>
-              <span className={styles.sentPill}>Klar — ikke sendt</span>
+              {invite === "sent" || invitation?.status === "sent" ? (
+                <span className={styles.sentPill}>Invitation sendt</span>
+              ) : viewerRole === "owner" ? (
+                <form action={sendPendingTradeTeamInvitationAction}>
+                  <button type="submit">
+                    {invitation?.status === "failed"
+                      ? "Prøv invitation igen"
+                      : "Send invitation"}
+                  </button>
+                </form>
+              ) : (
+                <span className={styles.sentPill}>Klar — ikke sendt</span>
+              )}
               {invite === "failed" ? (
                 <p role="alert">
                   Invitationen kunne ikke sendes. Prøv igen om et øjeblik.
