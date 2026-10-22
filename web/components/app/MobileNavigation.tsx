@@ -19,6 +19,7 @@ import {
   type MobileNavigationIcon,
 } from "@/lib/navigation/mobileNavigation";
 import { getBetaFeedbackHref } from "@/lib/feedback/betaFeedback";
+import AuthenticatedUserCard from "@/components/auth/AuthenticatedUserCard";
 
 function subscribeToConnectivity(onChange: () => void) {
   window.addEventListener("online", onChange);
@@ -292,6 +293,10 @@ export default function MobileNavigation() {
                 );
               })}
             </div>
+
+            <div className="mobile-navigation-account">
+              <AuthenticatedUserCard logoutLabel="Log ud" />
+            </div>
           </section>
         </>
       ) : null}
@@ -541,6 +546,12 @@ export default function MobileNavigation() {
           .more-navigation-grid {
             display: grid;
             gap: 8px;
+          }
+
+          .mobile-navigation-account {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
           }
 
           .more-navigation-link {

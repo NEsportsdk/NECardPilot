@@ -94,11 +94,13 @@ export function useCurrentUserIdentity(enabled = true) {
 
 type AuthenticatedUserCardProps = {
   identity?: UserIdentity;
+  logoutLabel?: string;
   onLogout?: () => void | Promise<void>;
 };
 
 export default function AuthenticatedUserCard({
   identity: suppliedIdentity,
+  logoutLabel,
   onLogout,
 }: AuthenticatedUserCardProps) {
   const router = useRouter();
@@ -128,7 +130,9 @@ export default function AuthenticatedUserCard({
       </div>
 
       <button
-        className="authenticated-user-logout"
+        className={`authenticated-user-logout ${
+          logoutLabel ? "authenticated-user-logout-with-label" : ""
+        }`}
         type="button"
         onClick={() => {
           void handleLogout();
@@ -136,7 +140,8 @@ export default function AuthenticatedUserCard({
         title="Log ud"
         aria-label="Log ud"
       >
-        ↗
+        <span aria-hidden="true">↗</span>
+        {logoutLabel ? <span>{logoutLabel}</span> : null}
       </button>
 
       <style jsx>{`
@@ -189,11 +194,22 @@ export default function AuthenticatedUserCard({
           width: 30px;
           height: 30px;
           flex: 0 0 auto;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
           border: 0;
           border-radius: 9px;
           background: transparent;
           color: #6f7789;
           cursor: pointer;
+        }
+
+        .authenticated-user-logout-with-label {
+          width: auto;
+          padding: 0 9px;
+          font-size: 10px;
+          font-weight: 750;
         }
 
         .authenticated-user-logout:hover,
