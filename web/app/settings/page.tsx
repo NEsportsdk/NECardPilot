@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 
 import AppSidebar from "@/components/app/AppSidebar";
+import BillingOverviewCard from "@/components/billing/BillingOverviewCard";
 import InstallAppCard from "@/components/pwa/InstallAppCard";
 import {
   getUserIdentity,
@@ -150,6 +151,8 @@ export default function SettingsPage() {
           </section>
         ) : (
           <div className="settings-grid">
+            <BillingOverviewCard />
+
             <section className="settings-panel profile-panel">
               <div className="panel-heading">
                 <div>

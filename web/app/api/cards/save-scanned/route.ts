@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import type { DuplicateCardIdentity } from "@/lib/cards/duplicateCards";
 import { findDuplicateCards } from "@/lib/cards/findDuplicateCards";
+import { isCardLimitError } from "@/lib/billing/billingOverview";
 import { createClient } from "@/lib/supabase/server";
 import {
   requireWorkspaceCapability,
@@ -615,14 +616,18 @@ export async function POST(
     ) {
       await cleanupUploadedImages();
 
+      const cardLimitReached = isCardLimitError(cardError?.message ?? "");
+
       return NextResponse.json(
         {
           error:
-            cardError?.message ??
-            "Kortet kunne ikke oprettes.",
+            cardLimitReached
+              ? "Din nuværende plan har nået sin kortkapacitet. Fjern et kort eller opgrader planen, før du gemmer flere."
+              : cardError?.message ?? "Kortet kunne ikke oprettes.",
+          ...(cardLimitReached ? { code: "CARD_LIMIT_REACHED" } : {}),
         },
         {
-          status: 500,
+          status: cardLimitReached ? 403 : 500,
         }
       );
     }

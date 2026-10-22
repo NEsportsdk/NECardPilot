@@ -6,6 +6,7 @@ import type {
   UploadedCardImage,
   UploadCardImagesResult,
 } from "@/lib/scan/uploadCardImages";
+import { isCardLimitError } from "@/lib/billing/billingOverview";
 import { createClient } from "@/lib/supabase/client";
 import { loadActiveWorkspace } from "@/lib/workspaces/workspace.client";
 
@@ -327,6 +328,20 @@ export async function createUploadedCaptureItem({
     if (!existingError && existing) {
       return mapCaptureQueueRow(existing as CaptureQueueRow);
     }
+  }
+
+  if (isCardLimitError(error?.message ?? "")) {
+    const { error: cleanupError } = await supabase.storage
+      .from(CARD_IMAGE_BUCKET)
+      .remove([uploadResult.front.path, uploadResult.back.path]);
+
+    if (cleanupError) {
+      console.error("Capture images could not be cleaned up:", cleanupError);
+    }
+
+    throw new Error(
+      "Din nuværende plan har nået sin kortkapacitet. Fjern et kort eller en køpost, før du uploader flere."
+    );
   }
 
   throw new Error(

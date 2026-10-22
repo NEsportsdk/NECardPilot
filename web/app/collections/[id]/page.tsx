@@ -12,6 +12,7 @@ import { useParams } from "next/navigation";
 
 import AddCardModal from "@/components/AddCardModal";
 import ScanCardModal from "@/components/ScanCardModal";
+import { isCardLimitError } from "@/lib/billing/billingOverview";
 import { createClient } from "@/lib/supabase/client";
 
 const CARD_IMAGE_BUCKET = "card-images";
@@ -1024,7 +1025,9 @@ export default function CollectionPage() {
 
     if (error) {
       setMessage(
-        `Kortet kunne ikke gemmes: ${error.message}`
+        isCardLimitError(error.message)
+          ? "Din nuværende plan har nået sin kortkapacitet. Fjern et kort eller opgrader planen, før du gemmer flere."
+          : `Kortet kunne ikke gemmes: ${error.message}`
       );
       setSaving(false);
       return;
