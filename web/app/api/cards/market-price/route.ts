@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+import { estimateMarketValuationCostUsd } from "@/lib/billing/aiPricing";
+import {
+  AiUsageGuardError,
+  completeAiUsage,
+  failAiUsage,
+  reserveAiUsage,
+} from "@/lib/billing/aiUsage.server";
+import {
+  toPublicAiUsageAllowance,
+  type AiUsageReservation,
+} from "@/lib/billing/aiUsage";
 import {
   resolveMarketPrice,
   type MarketCardSubject,
@@ -610,6 +621,9 @@ async function loadSavedEstimate({
 }
 
 export async function POST(request: Request) {
+  let usageReservation: AiUsageReservation | null = null;
+  let usageSupabase: Awaited<ReturnType<typeof createClient>> | null = null;
+
   try {
     if (!process.env.OPENAI_API_KEY) {
       throw new RequestError(
@@ -779,6 +793,14 @@ export async function POST(request: Request) {
     const subjectCondition = getSubjectCondition(gradingCompany, grade);
     const provisionalCanonicalTitle = buildProvisionalCanonicalTitle(subject);
 
+    usageReservation = await reserveAiUsage({
+      supabase,
+      feature: "market_valuation",
+      workspaceId: workspace.id,
+      idempotencyKey: `market:${cardId}:${Math.floor(Date.now() / 300_000)}`,
+    });
+    usageSupabase = supabase;
+
     const { data: estimateData, error: estimateInsertError } = await supabase
       .from("card_market_estimates")
       .insert({
@@ -891,6 +913,23 @@ export async function POST(request: Request) {
             ? "Markedsestimatet er beregnet og aktiveret."
             : "Et foreløbigt markedsestimat er beregnet. Datagrundlaget er begrænset og bør gennemgås.";
 
+      const allowance = usageReservation.allowance;
+
+      try {
+        await completeAiUsage({
+          supabase,
+          reservationId: usageReservation.id,
+          estimatedCostUsd: estimateMarketValuationCostUsd({
+            inputTokens: resolution.inputTokens,
+            outputTokens: resolution.outputTokens,
+            webSearchCalls: resolution.webSearchCalls,
+          }),
+        });
+        usageReservation = null;
+      } catch (usageError) {
+        console.error("AI-forbruget kunne ikke afsluttes:", usageError);
+      }
+
       return NextResponse.json({
         success: true,
         cached: false,
@@ -898,6 +937,7 @@ export async function POST(request: Request) {
         cardId,
         estimate: toPublicEstimate(savedResult.estimate),
         comparables: savedResult.comparables.map(toPublicComparable),
+        allowance: toPublicAiUsageAllowance(allowance),
         message,
       });
     } catch (error) {
@@ -911,7 +951,33 @@ export async function POST(request: Request) {
       throw error;
     }
   } catch (error) {
+    if (usageReservation && usageSupabase) {
+      try {
+        await failAiUsage({
+          supabase: usageSupabase,
+          reservationId: usageReservation.id,
+          failureCode:
+            error instanceof AiUsageGuardError ? error.code : "request_failed",
+        });
+      } catch (usageError) {
+        console.error("AI-reservationen kunne ikke frigives:", usageError);
+      }
+    }
+
     console.error("Fejl i market-price route:", error);
+
+    if (error instanceof AiUsageGuardError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          allowance: toPublicAiUsageAllowance(error.allowance),
+        },
+        {
+          status: error.status,
+        }
+      );
+    }
 
     const status =
       error instanceof SyntaxError ? 400 : getErrorStatus(error);
