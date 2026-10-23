@@ -5,6 +5,10 @@ import {
   parsePublicPlans,
 } from "@/lib/billing/billingOverview";
 import { createClient } from "@/lib/supabase/server";
+import {
+  isStripeCheckoutEnabled,
+  isStripeServerConfigured,
+} from "@/lib/stripe/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +28,7 @@ export async function GET() {
       );
     }
 
-    const [overviewResult, plansResult] = await Promise.all([
+    const [overviewResult, plansResult, subscriptionResult] = await Promise.all([
       supabase.rpc("get_vallective_billing_overview"),
       supabase
         .from("vallective_plans")
@@ -34,6 +38,11 @@ export async function GET() {
         .eq("is_active", true)
         .eq("is_public", true)
         .order("monthly_price_dkk_ore", { ascending: true }),
+      supabase
+        .from("vallective_subscriptions")
+        .select("provider, provider_customer_id")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
 
     if (overviewResult.error) {
@@ -48,10 +57,27 @@ export async function GET() {
       );
     }
 
+    if (subscriptionResult.error) {
+      throw new Error(
+        `Billing customer could not be loaded: ${subscriptionResult.error.message}`
+      );
+    }
+
+    const checkoutAvailable =
+      isStripeCheckoutEnabled() && isStripeServerConfigured();
+
     return NextResponse.json(
       {
         overview: parseBillingOverview(overviewResult.data),
         plans: parsePublicPlans(plansResult.data),
+        billing: {
+          checkoutAvailable,
+          portalAvailable: Boolean(
+            checkoutAvailable &&
+              subscriptionResult.data?.provider === "stripe" &&
+              subscriptionResult.data.provider_customer_id
+          ),
+        },
       },
       {
         headers: {
