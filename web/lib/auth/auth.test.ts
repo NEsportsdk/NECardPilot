@@ -134,6 +134,12 @@ describe("auth route classification", () => {
     expect(isPublicRoute("/auth/confirm")).toBe(true);
   });
 
+  it("keeps the signed Stripe webhook public without exposing billing actions", () => {
+    expect(isPublicRoute("/api/billing/webhook")).toBe(true);
+    expect(isPublicRoute("/api/billing/checkout")).toBe(false);
+    expect(isPublicRoute("/api/billing/portal")).toBe(false);
+  });
+
   it("keeps installable app metadata public", () => {
     expect(isPublicRoute("/manifest.webmanifest")).toBe(true);
     expect(isPublicRoute("/offline.html")).toBe(true);
