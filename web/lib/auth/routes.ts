@@ -5,6 +5,7 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/signup",
   "/forgot-password",
   "/auth",
+  "/api/billing/webhook",
   "/_vercel",
   "/manifest.webmanifest",
   "/offline.html",
