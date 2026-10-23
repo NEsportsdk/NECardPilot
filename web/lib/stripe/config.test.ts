@@ -7,6 +7,7 @@ import {
   isPaidPlanCode,
   isSameOriginBillingRequest,
   isStripeCheckoutEnabled,
+  isStripeTaxEnabled,
 } from "./config";
 
 afterEach(() => {
@@ -30,6 +31,13 @@ describe("Stripe billing configuration", () => {
 
     vi.stubEnv("VERCEL_ENV", "production");
     expect(isStripeCheckoutEnabled()).toBe(false);
+  });
+
+  it("only enables Stripe Tax after explicit configuration", () => {
+    expect(isStripeTaxEnabled()).toBe(false);
+
+    vi.stubEnv("STRIPE_TAX_ENABLED", "true");
+    expect(isStripeTaxEnabled()).toBe(true);
   });
 
   it("maps configured Stripe prices and uses the preview origin in sandbox", () => {

@@ -2,6 +2,10 @@ import { randomBytes } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
+import {
+  CURRENT_TERMS_VERSION,
+  hasAcceptedCurrentTerms,
+} from "@/lib/legal/consent";
 import { createClient } from "@/lib/supabase/server";
 import { getStripeClient } from "@/lib/stripe/client";
 import {
@@ -11,6 +15,7 @@ import {
   isSameOriginBillingRequest,
   isStripeCheckoutEnabled,
   isStripeServerConfigured,
+  isStripeTaxEnabled,
 } from "@/lib/stripe/config";
 
 export const runtime = "nodejs";
@@ -54,12 +59,23 @@ export async function POST(request: Request) {
     }
 
     const payload = (await request.json().catch(() => null)) as
-      | { planCode?: unknown }
+      | {
+          acceptedTerms?: unknown;
+          planCode?: unknown;
+          termsVersion?: unknown;
+        }
       | null;
 
     if (!payload || !isPaidPlanCode(payload.planCode)) {
       return NextResponse.json(
         { error: "Choose a valid Vallective plan." },
+        { status: 400 }
+      );
+    }
+
+    if (!hasAcceptedCurrentTerms(payload)) {
+      return NextResponse.json(
+        { error: "Accept the current subscription terms before checkout." },
         { status: 400 }
       );
     }
@@ -104,8 +120,11 @@ export async function POST(request: Request) {
       subscription?.provider === "stripe"
         ? subscription.provider_customer_id
         : null;
+    const acceptedAt = new Date().toISOString();
+    const taxEnabled = isStripeTaxEnabled();
     const session = await stripe.checkout.sessions.create(
       {
+        automatic_tax: { enabled: taxEnabled },
         cancel_url: `${siteUrl}/settings?billing=canceled`,
         client_reference_id: user.id,
         customer: customerId || undefined,
@@ -119,12 +138,16 @@ export async function POST(request: Request) {
         ],
         metadata: {
           vallective_plan_code: payload.planCode,
+          vallective_terms_accepted_at: acceptedAt,
+          vallective_terms_version: CURRENT_TERMS_VERSION,
           vallective_user_id: user.id,
         },
         mode: "subscription",
         subscription_data: {
           metadata: {
             vallective_plan_code: payload.planCode,
+            vallective_terms_accepted_at: acceptedAt,
+            vallective_terms_version: CURRENT_TERMS_VERSION,
             vallective_user_id: user.id,
           },
         },

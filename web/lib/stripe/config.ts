@@ -34,6 +34,10 @@ export function isStripeCheckoutEnabled() {
   return mode === "live";
 }
 
+export function isStripeTaxEnabled() {
+  return process.env.STRIPE_TAX_ENABLED?.trim().toLowerCase() === "true";
+}
+
 export function getStripePriceId(planCode: PaidPlanCode) {
   const priceId = process.env[PRICE_ENV_BY_PLAN[planCode]]?.trim();
 

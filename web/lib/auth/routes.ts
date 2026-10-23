@@ -1,6 +1,9 @@
 const PUBLIC_ROUTE_PREFIXES = [
   "/home",
   "/shop",
+  "/pricing",
+  "/terms",
+  "/privacy",
   "/login",
   "/signup",
   "/forgot-password",

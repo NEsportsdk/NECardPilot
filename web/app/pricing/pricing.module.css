@@ -1,0 +1,256 @@
+.page {
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(113, 86, 255, 0.18), transparent 30%),
+    #07090d;
+}
+
+.hero,
+.planGrid,
+.assurance,
+.finePrint {
+  width: min(1240px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+.hero {
+  padding: 110px 0 72px;
+  text-align: center;
+}
+
+.eyebrow,
+.planName {
+  margin: 0 0 18px;
+  color: #a99bff;
+  font-size: 11px;
+  font-weight: 780;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  max-width: 900px;
+  margin: 0 auto;
+  color: #faf9ff;
+  font-size: clamp(44px, 6vw, 78px);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+}
+
+.hero > p:last-child {
+  max-width: 680px;
+  margin: 28px auto 0;
+  color: #9299a9;
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.planGrid > article {
+  position: relative;
+  min-width: 0;
+  padding: 34px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.043), rgba(255, 255, 255, 0.014));
+}
+
+.planGrid > article.recommendedPlan {
+  border-color: rgba(169, 155, 255, 0.38);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(124, 104, 255, 0.18), transparent 40%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.016));
+  box-shadow: 0 30px 80px rgba(68, 48, 180, 0.14);
+}
+
+.recommendedBadge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(111, 225, 178, 0.1);
+  color: #8ae6c0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.price strong {
+  color: #faf9ff;
+  font-size: 58px;
+  letter-spacing: -0.06em;
+}
+
+.price span {
+  color: #8c94a6;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.taxLine {
+  min-height: 18px;
+  margin: 5px 0 0;
+  color: #6fe1b2;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.planSummary {
+  min-height: 70px;
+  margin: 25px 0 0;
+  color: #9299a9;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.planGrid ul {
+  margin: 8px 0 30px;
+  padding: 0;
+  display: grid;
+  gap: 13px;
+  list-style: none;
+}
+
+.planGrid li {
+  position: relative;
+  padding-left: 22px;
+  color: #c6cad4;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.planGrid li::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #8f80ff;
+  content: "✓";
+  font-weight: 900;
+}
+
+.planGrid article > a {
+  min-height: 48px;
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(169, 155, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(124, 104, 255, 0.08);
+  color: #ece9ff;
+  font-size: 12px;
+  font-weight: 760;
+  text-decoration: none;
+}
+
+.recommendedPlan > a {
+  border: 0;
+  background: linear-gradient(135deg, #9c8dff, #6854ed) !important;
+  color: white !important;
+  box-shadow: 0 18px 45px rgba(102, 79, 236, 0.23);
+}
+
+.assurance {
+  padding: 130px 0 95px;
+  display: grid;
+  grid-template-columns: 0.72fr 1.28fr;
+  gap: 70px;
+}
+
+.assurance h2 {
+  max-width: 470px;
+  margin: 0;
+  color: #f7f5fc;
+  font-size: clamp(34px, 4vw, 56px);
+  letter-spacing: -0.055em;
+  line-height: 1.04;
+}
+
+.assuranceGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.assuranceGrid article {
+  padding: 22px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.assuranceGrid strong {
+  color: #eeecf7;
+  font-size: 14px;
+}
+
+.assuranceGrid p,
+.finePrint p {
+  margin: 8px 0 0;
+  color: #7e8697;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.finePrint {
+  padding: 26px 0 100px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.finePrint p {
+  max-width: 880px;
+}
+
+.finePrint a {
+  color: #b0a5ff;
+}
+
+@media (max-width: 900px) {
+  .planGrid,
+  .assurance {
+    grid-template-columns: 1fr;
+  }
+
+  .assurance {
+    gap: 35px;
+  }
+}
+
+@media (max-width: 620px) {
+  .hero {
+    padding: 80px 0 55px;
+    text-align: left;
+  }
+
+  .hero h1 {
+    font-size: 46px;
+  }
+
+  .planGrid > article {
+    padding: 28px;
+  }
+
+  .planSummary {
+    min-height: 0;
+  }
+
+  .assurance {
+    padding: 90px 0 70px;
+  }
+}

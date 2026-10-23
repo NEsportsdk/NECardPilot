@@ -183,6 +183,8 @@
 
 .footerLinks {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 20px;
 }
 
@@ -209,12 +211,16 @@
   }
 
   .navigation a:first-child,
-  .navigation a:nth-child(3) {
+  .navigation a:nth-child(4) {
     display: none;
   }
 
   .footer {
     grid-template-columns: 1fr;
     align-items: start;
+  }
+
+  .footerLinks {
+    justify-content: flex-start;
   }
 }

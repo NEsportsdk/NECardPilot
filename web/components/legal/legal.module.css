@@ -1,0 +1,138 @@
+.page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 78% 10%, rgba(113, 86, 255, 0.13), transparent 26%),
+    #07090d;
+}
+
+.main {
+  width: min(940px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 100px 0 120px;
+}
+
+.hero {
+  padding-bottom: 52px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.hero > p {
+  margin: 0 0 17px;
+  color: #a99bff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 0;
+  color: #faf9ff;
+  font-size: clamp(44px, 7vw, 76px);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+}
+
+.hero > span {
+  max-width: 720px;
+  margin-top: 25px;
+  display: block;
+  color: #9299a9;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.hero small {
+  margin-top: 18px;
+  display: block;
+  color: #656d7f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.document {
+  padding-top: 54px;
+}
+
+.document section + section {
+  margin-top: 46px;
+  padding-top: 46px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.document h2 {
+  margin: 0 0 18px;
+  color: #f0eef8;
+  font-size: 24px;
+  letter-spacing: -0.035em;
+}
+
+.document h3 {
+  margin: 26px 0 10px;
+  color: #d8d4eb;
+  font-size: 15px;
+}
+
+.document p,
+.document li,
+.document address {
+  color: #9098aa;
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+.document p {
+  margin: 0;
+}
+
+.document p + p {
+  margin-top: 14px;
+}
+
+.document ul {
+  margin: 14px 0 0;
+  padding-left: 20px;
+}
+
+.document li + li {
+  margin-top: 8px;
+}
+
+.document strong {
+  color: #e8e5f3;
+}
+
+.document a {
+  color: #b0a5ff;
+}
+
+.document address {
+  margin-top: 14px;
+  padding: 18px 20px;
+  border: 1px solid rgba(169, 155, 255, 0.16);
+  border-radius: 15px;
+  background: rgba(124, 104, 255, 0.045);
+  font-style: normal;
+}
+
+@media (max-width: 620px) {
+  .main {
+    padding: 75px 0 90px;
+  }
+
+  .hero {
+    padding-bottom: 38px;
+  }
+
+  .document {
+    padding-top: 40px;
+  }
+
+  .document section + section {
+    margin-top: 36px;
+    padding-top: 36px;
+  }
+}
