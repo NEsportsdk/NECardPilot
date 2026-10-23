@@ -11,7 +11,13 @@ import type {
 type BillingOverviewResponse = {
   overview: BillingOverview;
   plans: PublicPlan[];
+  billing: {
+    checkoutAvailable: boolean;
+    portalAvailable: boolean;
+  };
 };
+
+type BillingAction = "portal" | PublicPlan["code"];
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -150,6 +156,11 @@ export default function BillingOverviewCard() {
   const [data, setData] = useState<BillingOverviewResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [action, setAction] = useState<BillingAction | null>(null);
+  const [actionMessage, setActionMessage] = useState("");
+  const [actionTone, setActionTone] = useState<"success" | "error">(
+    "success"
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -193,8 +204,58 @@ export default function BillingOverviewCard() {
 
     void loadBillingOverview();
 
+    const billingResult = new URLSearchParams(window.location.search).get(
+      "billing"
+    );
+
+    if (billingResult === "success") {
+      setActionTone("success");
+      setActionMessage(
+        "Payment received. Your allowance updates as soon as Stripe confirms the subscription."
+      );
+    } else if (billingResult === "canceled") {
+      setActionTone("error");
+      setActionMessage("Checkout was closed. Your current plan is unchanged.");
+    }
+
     return () => controller.abort();
   }, []);
+
+  async function openBilling(
+    endpoint: "/api/billing/checkout" | "/api/billing/portal",
+    selectedAction: BillingAction,
+    planCode?: string
+  ) {
+    setAction(selectedAction);
+    setActionMessage("");
+
+    try {
+      const response = await fetch(endpoint, {
+        body: planCode ? JSON.stringify({ planCode }) : undefined,
+        credentials: "same-origin",
+        headers: planCode ? { "Content-Type": "application/json" } : undefined,
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        url?: string;
+      };
+
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.error || "Secure billing could not be opened.");
+      }
+
+      window.location.assign(payload.url);
+    } catch (actionError) {
+      setActionTone("error");
+      setActionMessage(
+        actionError instanceof Error
+          ? actionError.message
+          : "Secure billing could not be opened."
+      );
+      setAction(null);
+    }
+  }
 
   return (
     <section className="billing-card" aria-labelledby="billing-heading">
@@ -260,6 +321,36 @@ export default function BillingOverviewCard() {
             </span>
           </div>
 
+          {actionMessage ? (
+            <p
+              className={`billing-message billing-message-${actionTone}`}
+              role="status"
+            >
+              {actionMessage}
+            </p>
+          ) : null}
+
+          {data.billing.portalAvailable ? (
+            <div className="portal-row">
+              <div>
+                <strong>Subscription controls</strong>
+                <span>
+                  Update payment details, download invoices or cancel securely
+                  in Stripe.
+                </span>
+              </div>
+              <button
+                disabled={action !== null}
+                onClick={() =>
+                  void openBilling("/api/billing/portal", "portal")
+                }
+                type="button"
+              >
+                {action === "portal" ? "Opening..." : "Manage subscription"}
+              </button>
+            </div>
+          ) : null}
+
           {data.overview.planCode !== "internal" ? (
             <div className="plan-options" aria-label="Available plans">
               {data.plans.map((plan) => (
@@ -280,12 +371,41 @@ export default function BillingOverviewCard() {
                   </p>
                   {plan.code === data.overview.planCode ? (
                     <small>Current plan</small>
-                  ) : null}
+                  ) : plan.monthlyPriceDkkOre > 0 ? (
+                    <button
+                      disabled={
+                        action !== null ||
+                        (!data.billing.checkoutAvailable &&
+                          !data.billing.portalAvailable)
+                      }
+                      onClick={() =>
+                        void openBilling(
+                          data.billing.portalAvailable
+                            ? "/api/billing/portal"
+                            : "/api/billing/checkout",
+                          plan.code,
+                          data.billing.portalAvailable ? undefined : plan.code
+                        )
+                      }
+                      type="button"
+                    >
+                      {action === plan.code
+                        ? "Opening..."
+                        : data.billing.portalAvailable
+                          ? "Change in portal"
+                          : data.billing.checkoutAvailable
+                            ? `Choose ${plan.displayName}`
+                          : "Coming soon"}
+                    </button>
+                  ) : (
+                    <small>Included account</small>
+                  )}
                 </article>
               ))}
               <p className="checkout-note">
-                Secure self-service upgrades will open when Vallective billing
-                is connected. Limits are already enforced safely.
+                {data.billing.checkoutAvailable
+                  ? "Checkout and subscription management are handled securely by Stripe."
+                  : "Secure self-service subscriptions are still in private testing. Limits are already enforced safely."}
               </p>
             </div>
           ) : null}
@@ -390,6 +510,26 @@ export default function BillingOverviewCard() {
           font-size: 10px;
         }
 
+        .billing-message {
+          margin: 17px 0 0;
+          padding: 12px 14px;
+          border-radius: 12px;
+          font-size: 10px;
+          line-height: 1.55;
+        }
+
+        .billing-message-success {
+          border: 1px solid rgba(52, 211, 153, 0.2);
+          background: rgba(16, 185, 129, 0.07);
+          color: #a7f3d0;
+        }
+
+        .billing-message-error {
+          border: 1px solid rgba(248, 113, 113, 0.22);
+          background: rgba(239, 68, 68, 0.07);
+          color: #fecaca;
+        }
+
         .usage-grid {
           margin-top: 24px;
           display: grid;
@@ -417,6 +557,54 @@ export default function BillingOverviewCard() {
         .billing-footer span {
           color: #9f93ff;
           font-weight: 750;
+        }
+
+        .portal-row {
+          margin-top: 18px;
+          padding: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          border: 1px solid rgba(167, 139, 250, 0.18);
+          border-radius: 14px;
+          background: rgba(124, 92, 255, 0.06);
+        }
+
+        .portal-row > div {
+          display: grid;
+          gap: 4px;
+        }
+
+        .portal-row strong {
+          color: #f8fafc;
+          font-size: 10px;
+        }
+
+        .portal-row span {
+          color: #747d90;
+          font-size: 9px;
+          line-height: 1.5;
+        }
+
+        .portal-row button,
+        .plan-options button {
+          min-height: 36px;
+          padding: 0 13px;
+          border: 1px solid rgba(167, 139, 250, 0.28);
+          border-radius: 10px;
+          background: linear-gradient(135deg, #8066ee, #6553d2);
+          color: #ffffff;
+          font: inherit;
+          font-size: 9px;
+          font-weight: 850;
+          cursor: pointer;
+        }
+
+        .portal-row button:disabled,
+        .plan-options button:disabled {
+          opacity: 0.48;
+          cursor: not-allowed;
         }
 
         .plan-options {
@@ -466,6 +654,11 @@ export default function BillingOverviewCard() {
           line-height: 1.55;
         }
 
+        .plan-options button {
+          width: 100%;
+          margin-top: 11px;
+        }
+
         .plan-options small {
           display: block;
           margin-top: 8px;
@@ -498,9 +691,14 @@ export default function BillingOverviewCard() {
           }
 
           .billing-header,
-          .billing-footer {
+          .billing-footer,
+          .portal-row {
             align-items: flex-start;
             flex-direction: column;
+          }
+
+          .portal-row button {
+            width: 100%;
           }
 
           .plan-status {
