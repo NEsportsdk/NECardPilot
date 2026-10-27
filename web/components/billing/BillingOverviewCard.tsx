@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type {
@@ -7,6 +8,7 @@ import type {
   BillingUsageMetric,
   PublicPlan,
 } from "@/lib/billing/billingOverview";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal/consent";
 
 type BillingOverviewResponse = {
   overview: BillingOverview;
@@ -161,6 +163,7 @@ export default function BillingOverviewCard() {
   const [actionTone, setActionTone] = useState<"success" | "error">(
     "success"
   );
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -231,7 +234,13 @@ export default function BillingOverviewCard() {
 
     try {
       const response = await fetch(endpoint, {
-        body: planCode ? JSON.stringify({ planCode }) : undefined,
+        body: planCode
+          ? JSON.stringify({
+              acceptedTerms: termsAccepted,
+              planCode,
+              termsVersion: CURRENT_TERMS_VERSION,
+            })
+          : undefined,
         credentials: "same-origin",
         headers: planCode ? { "Content-Type": "application/json" } : undefined,
         method: "POST",
@@ -353,6 +362,30 @@ export default function BillingOverviewCard() {
 
           {data.overview.planCode !== "internal" ? (
             <div className="plan-options" aria-label="Available plans">
+              {data.billing.checkoutAvailable &&
+              !data.billing.portalAvailable ? (
+                <label className="terms-consent">
+                  <input
+                    checked={termsAccepted}
+                    onChange={(event) =>
+                      setTermsAccepted(event.currentTarget.checked)
+                    }
+                    type="checkbox"
+                  />
+                  <span>
+                    I accept the recurring monthly charge and agree to the{" "}
+                    <Link href="/terms" target="_blank">
+                      subscription terms
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" target="_blank">
+                      privacy notice
+                    </Link>
+                    . Consumer prices include VAT. Cancel anytime; access continues
+                    until the end of the paid period.
+                  </span>
+                </label>
+              ) : null}
               {data.plans.map((plan) => (
                 <article
                   className={
@@ -376,7 +409,10 @@ export default function BillingOverviewCard() {
                       disabled={
                         action !== null ||
                         (!data.billing.checkoutAvailable &&
-                          !data.billing.portalAvailable)
+                          !data.billing.portalAvailable) ||
+                        (data.billing.checkoutAvailable &&
+                          !data.billing.portalAvailable &&
+                          !termsAccepted)
                       }
                       onClick={() =>
                         void openBilling(
@@ -404,7 +440,7 @@ export default function BillingOverviewCard() {
               ))}
               <p className="checkout-note">
                 {data.billing.checkoutAvailable
-                  ? "Checkout and subscription management are handled securely by Stripe."
+                  ? "Consumer prices include VAT. Checkout and subscription management are handled securely by Stripe."
                   : "Secure self-service subscriptions are still in private testing. Limits are already enforced safely."}
               </p>
             </div>
@@ -614,6 +650,33 @@ export default function BillingOverviewCard() {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 10px;
+        }
+
+        .terms-consent {
+          grid-column: 1 / -1;
+          padding: 14px;
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: start;
+          gap: 11px;
+          border: 1px solid rgba(167, 139, 250, 0.2);
+          border-radius: 13px;
+          background: rgba(124, 92, 255, 0.055);
+          color: #828b9e;
+          font-size: 9px;
+          line-height: 1.65;
+        }
+
+        .terms-consent input {
+          width: 17px;
+          height: 17px;
+          margin: 1px 0 0;
+          accent-color: #8066ee;
+        }
+
+        .terms-consent a {
+          color: #c4b5fd;
+          font-weight: 750;
         }
 
         .plan-options article {

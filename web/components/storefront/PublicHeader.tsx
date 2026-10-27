@@ -16,6 +16,7 @@ export default function PublicHeader({ cartCount = 0 }: { cartCount?: number }) 
 
       <nav aria-label="Public navigation" className={styles.navigation}>
         <Link href="/#story">Our story</Link>
+        <Link href="/pricing">Pricing</Link>
         <Link href="/shop">Shop</Link>
         <Link href="/login">Sign in</Link>
         <Link className={styles.cartLink} href="/shop/cart">

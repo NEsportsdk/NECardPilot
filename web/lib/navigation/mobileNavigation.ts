@@ -106,8 +106,11 @@ const mobileNavigationExcludedRoutes = [
   "/forgot-password",
   "/home",
   "/login",
+  "/pricing",
+  "/privacy",
   "/shop",
   "/signup",
+  "/terms",
 ];
 
 export function mobileNavigationPathnameFromSegment(segment: string | null) {

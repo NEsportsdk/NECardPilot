@@ -51,14 +51,25 @@ for (const plan of plans) {
     limit: 1,
   });
   const price =
-    prices.data[0] ??
+    (prices.data[0]?.tax_behavior === "unspecified"
+      ? await stripe.prices.update(prices.data[0].id, {
+          tax_behavior: "inclusive",
+        })
+      : prices.data[0]) ??
     (await stripe.prices.create({
       currency: "dkk",
       lookup_key: plan.lookupKey,
       product: product.id,
       recurring: { interval: "month" },
+      tax_behavior: "inclusive",
       unit_amount: plan.price,
     }));
+
+  if (price.tax_behavior !== "inclusive") {
+    throw new Error(
+      `${plan.lookupKey} must use inclusive tax behavior before checkout.`
+    );
+  }
 
   result[plan.code] = {
     priceId: price.id,
